@@ -406,6 +406,23 @@ function clrSt(id){const el=document.getElementById(id);el.className="tx-st";el.
 
 function switchTab(n){document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));document.getElementById("pane-"+n).classList.add("active");document.getElementById("tab-"+n).classList.add("active")}
 
+// Auto-detect MetaMask account or network changes
+if(window.ethereum){
+  window.ethereum.on("accountsChanged", async(accounts)=>{
+    if(accounts.length===0){
+      // Wallet disconnected
+      document.getElementById("walletPill").classList.remove("show");
+      document.getElementById("connectBtn").textContent="Connect Wallet";
+      document.getElementById("connectBtn").disabled=false;
+    } else {
+      // Account switched — reconnect automatically
+      document.getElementById("connectBtn").textContent="Reconnecting...";
+      await connectWallet();
+    }
+  });
+  window.ethereum.on("chainChanged",()=>{ window.location.reload(); });
+}
+
 window.addEventListener("load",()=>{const p=new URLSearchParams(window.location.search);const h=p.get("hash");if(h){document.getElementById("verifyHash").value=h;runVerify()}});
 
 async function connectWallet(){
