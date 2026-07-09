@@ -432,6 +432,8 @@ async function connectWallet(){
   const btn=document.getElementById("connectBtn");btn.textContent="Connecting...";btn.disabled=true;
   try{
     provider=new ethers.BrowserProvider(window.ethereum);
+    // Always prompt user to select which account to connect
+    await provider.send("wallet_requestPermissions",[{"eth_accounts":{}}]);
     await provider.send("eth_requestAccounts",[]);
     signer=await provider.getSigner();userAddress=await signer.getAddress();
     const net=await provider.getNetwork();
