@@ -2,13 +2,7 @@
 pragma solidity ^0.8.20;
 
 // =========================================================
-// INTERFACE
-// An interface is a lightweight way to call another contract.
-// Instead of importing the full InstitutionRegistry contract,
-// we declare only the two functions we need from it.
-// This keeps CertificateRegistry independent — it works as
-// long as the other contract has these functions, regardless
-// of everything else inside it.
+// INTERFACE — how this contract talks to InstitutionRegistry
 // =========================================================
 
 interface IInstitutionRegistry {
@@ -32,29 +26,30 @@ interface IInstitutionRegistry {
  *          Verification System developed for MSc CIT899 thesis at the
  *          National Open University of Nigeria (NOUN), Lagos Mainland I.
  *
- *          Key design decisions that improve on existing implementations:
+ *          KEY DESIGN DECISIONS:
  *
  *          1. DUAL-HASH SCHEME
- *             metaHash — keccak256 of all metadata fields, computed
- *             on-chain inside issueCertificate(). This is the unique
- *             identifier stored as the mapping key.
- *             docHash  — SHA-256 of the actual PDF document, computed
- *             in the browser before upload and passed as a parameter.
- *             Both hashes are stored and checked during verification,
- *             providing cryptographic tamper-evidence for both the
- *             data fields and the physical document.
+ *             metaHash — keccak256 of metadata fields, computed on-chain.
+ *             This is the unique certificate identifier (the mapping key).
+ *             docHash  — SHA-256 of the actual PDF, computed in the browser
+ *             and passed in as a parameter. Stored permanently on-chain.
+ *             Together, these provide tamper-evidence for both the data
+ *             fields and the physical certificate document.
  *
  *          2. INSTITUTION NAME FROM REGISTRY
- *             The institution name embedded in every certificate is
- *             pulled from InstitutionRegistry using msg.sender — not
- *             typed by the user. This closes a fraud vector present
- *             in prior implementations.
+ *             institutionName is pulled from InstitutionRegistry using
+ *             msg.sender — not typed by the user. This closes a fraud
+ *             vector present in prior implementations (e.g. CertiQ).
  *
  *          3. NO POST-ISSUANCE MODIFICATION
- *             There is no function to update or swap the document hash
- *             after issuance. Immutability is preserved by design.
- *             To correct a certificate, it must be revoked and reissued,
- *             creating a full auditable trail on-chain.
+ *             No function exists to update or replace the docHash or
+ *             ipfsCid after issuance. Immutability is preserved by design.
+ *
+ *          4. STRUCT INPUT PATTERN (resolves "stack too deep" error)
+ *             issueCertificate() accepts a CertificateInput struct rather
+ *             than 8 individual parameters. This is a Solidity best practice
+ *             that keeps the function's local variable count within the
+ *             EVM's 16-slot stack limit.
  */
 contract CertificateRegistry {
 
@@ -62,8 +57,7 @@ contract CertificateRegistry {
     // STATE VARIABLES
     // =========================================================
 
-    /// @notice Reference to the deployed InstitutionRegistry contract.
-    ///         Used to verify that only approved institutions can issue.
+    /// @notice Reference to the deployed InstitutionRegistry contract
     IInstitutionRegistry public registry;
 
 
@@ -72,32 +66,57 @@ contract CertificateRegistry {
     // =========================================================
 
     /**
+     * @notice Input struct for issueCertificate().
+     *
+     * @dev    Grouping all inputs into one struct solves the EVM
+     *         "stack too deep" error that occurs when a function has
+     *         more than ~16 local variables. The struct is passed as
+     *         a single `memory` reference, counting as ONE stack slot.
+     *         This is the standard Solidity pattern for functions
+     *         that require many inputs.
+     */
+    struct CertificateInput {
+        string  studentName;      // Full name of the graduate
+        string  studentId;        // Matric/ID number at the institution
+        string  programme;        // e.g. "Bachelor of Science in Computer Science"
+        string  degreeClass;      // e.g. "First Class", "Second Class Upper"
+        uint256 completionYear;   // Year of graduation e.g. 2024
+        string  email;            // Graduate's email address
+        bytes32 docHash;          // SHA-256 of the PDF — computed in browser
+        string  ipfsCid;          // IPFS content identifier of the document
+    }
+
+    /**
      * @notice Represents a single academic credential stored on-chain.
      *
      * @dev    `metaHash` is also the mapping key in `certificates`.
-     *         Storing it inside the struct as well makes it readable
-     *         directly from the struct without needing the key separately.
+     *         Storing it inside the struct makes it self-contained —
+     *         any caller who receives the struct also has the key.
      *
-     *         `docHash` is bytes32 because SHA-256 always produces
-     *         exactly 32 bytes. Using bytes32 (a fixed-size type) is
-     *         more gas-efficient than a dynamic `bytes` or `string`.
+     *         `docHash` uses bytes32 because SHA-256 always produces
+     *         exactly 32 bytes. Fixed-size types are more gas-efficient
+     *         than dynamic `bytes` or `string`.
+     *
+     *         Returning this full struct from verifyCertificate() also
+     *         solves the "stack too deep" problem on the return side —
+     *         one struct return = one stack slot.
      */
     struct Certificate {
-        bytes32 metaHash;            // keccak256 of all metadata — unique identifier
-        bytes32 docHash;             // SHA-256 of the PDF document (computed in browser)
-        string  ipfsCid;             // IPFS content identifier for retrieving the document
-        string  institutionName;     // Pulled from InstitutionRegistry — not user input
+        bytes32 metaHash;            // keccak256 of metadata — unique identifier
+        bytes32 docHash;             // SHA-256 of the PDF document (from browser)
+        string  ipfsCid;             // IPFS content identifier for the document
+        string  institutionName;     // From InstitutionRegistry — not user input
         string  institutionAcronym;  // e.g. "UNILAG", "OAU", "NOUN"
-        string  programme;           // e.g. "Bachelor of Science in Computer Science"
-        string  degreeClass;         // e.g. "First Class", "Second Class Upper"
+        string  programme;           // Degree programme name
+        string  degreeClass;         // Degree classification
         string  studentName;         // Full name of the graduate
-        string  studentId;           // Institution's student matric/ID number
+        string  studentId;           // Student matric/ID number
         string  email;               // Graduate's email address
-        uint256 completionYear;      // Year of graduation e.g. 2024
+        uint256 completionYear;      // Year of graduation
         uint256 issuedAt;            // Block timestamp of issuance
         address issuer;              // Wallet address of the issuing institution
         bool    isValid;             // False if the certificate has been revoked
-        string  revokeReason;        // Reason for revocation (empty string if not revoked)
+        string  revokeReason;        // Reason for revocation (empty if still valid)
         uint256 revokedAt;           // Timestamp of revocation (0 if not revoked)
     }
 
@@ -106,9 +125,8 @@ contract CertificateRegistry {
     // MAPPINGS
     // =========================================================
 
-    /// @notice Maps a certificate's metaHash to its full record.
-    ///         The metaHash is the primary key — the "certificate number"
-    ///         of this system.
+    /// @notice Maps a certificate's metaHash to its full on-chain record.
+    ///         metaHash is the "certificate number" of this system.
     mapping(bytes32 => Certificate) public certificates;
 
 
@@ -116,11 +134,7 @@ contract CertificateRegistry {
     // EVENTS
     // =========================================================
 
-    /**
-     * @notice Emitted when a new certificate is issued.
-     * @dev    The frontend listens for this event to confirm issuance
-     *         and retrieve the metaHash for QR code generation.
-     */
+    /// @notice Emitted when a new certificate is issued.
     event CertificateIssued(
         bytes32 indexed metaHash,
         address indexed issuer,
@@ -131,11 +145,7 @@ contract CertificateRegistry {
         uint256         issuedAt
     );
 
-    /**
-     * @notice Emitted when a certificate is revoked.
-     * @dev    Revocation is permanent. A new certificate must be
-     *         issued if a correction is needed.
-     */
+    /// @notice Emitted when a certificate is revoked.
     event CertificateRevoked(
         bytes32 indexed metaHash,
         address indexed issuer,
@@ -148,12 +158,7 @@ contract CertificateRegistry {
     // MODIFIERS
     // =========================================================
 
-    /**
-     * @notice Restricts issuance to approved institutions only.
-     * @dev    Calls isRegistered() on the InstitutionRegistry contract.
-     *         This is the link between the two contracts — every time
-     *         an institution tries to issue, we check the registry first.
-     */
+    /// @notice Restricts issuance to approved institutions only.
     modifier onlyRegisteredInstitution() {
         require(
             registry.isRegistered(msg.sender),
@@ -165,18 +170,12 @@ contract CertificateRegistry {
 
     // =========================================================
     // CONSTRUCTOR
-    // This constructor takes a PARAMETER — the address of the
-    // already-deployed InstitutionRegistry contract.
-    // This means you must deploy InstitutionRegistry FIRST,
-    // copy its address, then deploy CertificateRegistry with
-    // that address as the argument.
+    // Deploy InstitutionRegistry FIRST. Copy its address.
+    // Then deploy this contract, passing that address in.
     // =========================================================
 
     /**
      * @notice Links this contract to a deployed InstitutionRegistry.
-     * @dev    The registry address is set once at deployment and
-     *         cannot be changed — this prevents the admin from
-     *         swapping the registry to a permissive one later.
      * @param  _registryAddress  Address of the deployed InstitutionRegistry
      */
     constructor(address _registryAddress) {
@@ -195,76 +194,52 @@ contract CertificateRegistry {
     /**
      * @notice Issues a new academic credential and stores it on-chain.
      *
-     * @dev    Only callable by a registered institution (onlyRegisteredInstitution).
-     *
-     *         DUAL-HASH PROCESS:
-     *         Step 1 — metaHash is computed HERE inside this function using
-     *                  keccak256(abi.encodePacked(...)).
-     *                  keccak256 is Solidity's built-in hashing function.
-     *                  abi.encodePacked tightly packs the arguments into bytes
-     *                  before hashing. Together they produce a deterministic
-     *                  32-byte fingerprint of the certificate's key fields.
-     *
-     *         Step 2 — docHash is computed in the BROWSER (JavaScript) using
-     *                  the Web Crypto API's SHA-256 on the PDF file, then
-     *                  passed in as the `_docHash` parameter. The contract
-     *                  stores it without modification.
+     * @dev    DUAL-HASH PROCESS:
+     *         metaHash — computed HERE inside the function using
+     *         keccak256(abi.encodePacked(issuer, studentId, programme, year)).
+     *         docHash  — computed in the browser (SHA-256 of the PDF file)
+     *         and passed in via _input.docHash.
      *
      *         INSTITUTION NAME:
-     *         We call registry.getInstitution(msg.sender) to get the official
-     *         institution name from the registry — the issuer cannot type
-     *         a different institution name into this function.
+     *         Pulled from InstitutionRegistry via msg.sender.
+     *         The issuing wallet cannot claim to be a different institution.
      *
-     * @param  _studentName      Full name of the graduate
-     * @param  _studentId        Student's matric/ID number
-     * @param  _programme        Degree programme name
-     * @param  _degreeClass      Classification of the degree
-     * @param  _completionYear   Year of graduation
-     * @param  _email            Graduate's email address
-     * @param  _docHash          SHA-256 of the certificate PDF (from browser)
-     * @param  _ipfsCid          IPFS content ID of the uploaded document
+     *         STRUCT INPUT:
+     *         All certificate fields are bundled into CertificateInput memory.
+     *         This is a single stack slot, solving the stack-too-deep error.
+     *
+     * @param  _input  A CertificateInput struct containing all certificate fields
      */
     function issueCertificate(
-        string memory _studentName,
-        string memory _studentId,
-        string memory _programme,
-        string memory _degreeClass,
-        uint256       _completionYear,
-        string memory _email,
-        bytes32       _docHash,
-        string memory _ipfsCid
+        CertificateInput memory _input
     ) external onlyRegisteredInstitution {
 
         // --- Input validation ---
-        require(bytes(_studentName).length > 0,   "Student name cannot be empty");
-        require(bytes(_studentId).length > 0,      "Student ID cannot be empty");
-        require(bytes(_programme).length > 0,      "Programme cannot be empty");
-        require(bytes(_degreeClass).length > 0,    "Degree class cannot be empty");
+        require(bytes(_input.studentName).length > 0,  "Student name cannot be empty");
+        require(bytes(_input.studentId).length > 0,    "Student ID cannot be empty");
+        require(bytes(_input.programme).length > 0,    "Programme cannot be empty");
+        require(bytes(_input.degreeClass).length > 0,  "Degree class cannot be empty");
         require(
-            _completionYear > 1900 && _completionYear <= 2100,
+            _input.completionYear > 1900 && _input.completionYear <= 2100,
             "Completion year is not valid"
         );
-        require(_docHash != bytes32(0),            "Document hash cannot be empty");
+        require(_input.docHash != bytes32(0), "Document hash cannot be empty");
 
-        // --- Pull institution details from registry (not from user input) ---
+        // --- Pull institution name from registry (not from user input) ---
         (string memory instName, string memory instAcronym,,) =
             registry.getInstitution(msg.sender);
 
-        // --- Compute the unique certificate identifier on-chain ---
-        // Using issuer address + studentId + programme + year ensures
-        // uniqueness: the same institution cannot issue two identical
-        // certificates for the same student in the same programme and year.
+        // --- Compute unique certificate identifier on-chain ---
         bytes32 metaHash = keccak256(abi.encodePacked(
-            msg.sender,       // issuing institution's wallet
-            _studentId,       // student's unique ID at that institution
-            _programme,       // degree programme
-            _completionYear   // graduation year
+            msg.sender,
+            _input.studentId,
+            _input.programme,
+            _input.completionYear
         ));
 
         // --- Prevent duplicate issuance ---
-        // address(0) is the "zero address" — it is the default value for
-        // an address field in an empty/unmapped struct. If issuer is still
-        // address(0), no certificate has been stored at this metaHash yet.
+        // address(0) is the default value for an unmapped address field.
+        // If issuer is still address(0), no certificate exists here yet.
         require(
             certificates[metaHash].issuer == address(0),
             "A certificate already exists for this student, programme, and year"
@@ -273,16 +248,16 @@ contract CertificateRegistry {
         // --- Store certificate permanently on-chain ---
         certificates[metaHash] = Certificate({
             metaHash           : metaHash,
-            docHash            : _docHash,
-            ipfsCid            : _ipfsCid,
+            docHash            : _input.docHash,
+            ipfsCid            : _input.ipfsCid,
             institutionName    : instName,
             institutionAcronym : instAcronym,
-            programme          : _programme,
-            degreeClass        : _degreeClass,
-            studentName        : _studentName,
-            studentId          : _studentId,
-            email              : _email,
-            completionYear     : _completionYear,
+            programme          : _input.programme,
+            degreeClass        : _input.degreeClass,
+            studentName        : _input.studentName,
+            studentId          : _input.studentId,
+            email              : _input.email,
+            completionYear     : _input.completionYear,
             issuedAt           : block.timestamp,
             issuer             : msg.sender,
             isValid            : true,
@@ -294,23 +269,19 @@ contract CertificateRegistry {
             metaHash,
             msg.sender,
             instName,
-            _studentName,
-            _studentId,
-            _programme,
+            _input.studentName,
+            _input.studentId,
+            _input.programme,
             block.timestamp
         );
     }
 
     /**
      * @notice Revokes a previously issued certificate.
-     *
-     * @dev    Only the institution that originally issued the certificate
-     *         can revoke it. Revocation is permanent — isValid becomes
-     *         false and cannot be set back to true.
-     *         A reason must always be provided for audit transparency.
-     *
-     * @param  _metaHash   The unique identifier of the certificate to revoke
-     * @param  _reason     The reason for revocation (stored on-chain permanently)
+     * @dev    Only the original issuing institution can revoke.
+     *         Revocation is permanent. A reason is mandatory.
+     * @param  _metaHash  The unique identifier of the certificate to revoke
+     * @param  _reason    The reason for revocation (stored on-chain permanently)
      */
     function revokeCertificate(
         bytes32       _metaHash,
@@ -346,77 +317,47 @@ contract CertificateRegistry {
     // =========================================================
 
     /**
-     * @notice Verifies a certificate and returns its full details.
+     * @notice Verifies a certificate and returns its complete record.
      *
-     * @dev    This is a PUBLIC view function — anyone can call it
-     *         with no wallet and no gas cost. This is what the
-     *         employer/verifier portal calls when scanning a QR code.
+     * @dev    Returns the full Certificate struct as a single memory value.
+     *         This solves the "stack too deep" problem on the return side —
+     *         returning one struct counts as one stack slot, not 12.
      *
-     *         The caller receives both isValid (current status) and
-     *         all certificate fields. If isValid is false, revokeReason
-     *         explains why. The docHash can be independently verified
-     *         by re-computing SHA-256 of the downloaded IPFS document
-     *         and comparing it to the returned docHash.
+     *         This is a PUBLIC view function — anyone can call it with
+     *         no wallet and no gas cost. This is what the employer or
+     *         verifier portal calls when a QR code is scanned.
      *
-     * @param  _metaHash          The certificate's unique identifier
-     * @return isValid            True if certificate is active; false if revoked
-     * @return institutionName    Official name of the issuing institution
-     * @return institutionAcronym Acronym of the issuing institution
-     * @return studentName        Full name of the graduate
-     * @return studentId          Student's matric/ID number
-     * @return programme          Degree programme
-     * @return degreeClass        Degree classification
-     * @return completionYear     Year of graduation
-     * @return issuedAt           Timestamp of issuance
-     * @return docHash            SHA-256 of the PDF — for document verification
-     * @return ipfsCid            IPFS link to retrieve the actual document
-     * @return revokeReason       Reason for revocation (empty if still valid)
+     *         To verify document integrity, the caller should:
+     *         1. Retrieve the document from IPFS using cert.ipfsCid
+     *         2. Compute SHA-256 of the downloaded file in the browser
+     *         3. Compare it to cert.docHash — any mismatch = tampering
+     *
+     * @param  _metaHash        The certificate's unique identifier
+     * @return Certificate      The full certificate struct
      */
-    function verifyCertificate(bytes32 _metaHash) external view returns (
-        bool    isValid,
-        string memory institutionName,
-        string memory institutionAcronym,
-        string memory studentName,
-        string memory studentId,
-        string memory programme,
-        string memory degreeClass,
-        uint256 completionYear,
-        uint256 issuedAt,
-        bytes32 docHash,
-        string memory ipfsCid,
-        string memory revokeReason
-    ) {
+    function verifyCertificate(bytes32 _metaHash)
+        external
+        view
+        returns (Certificate memory)
+    {
         require(
             certificates[_metaHash].issuer != address(0),
             "Certificate not found"
         );
-
-        Certificate memory cert = certificates[_metaHash];
-        return (
-            cert.isValid,
-            cert.institutionName,
-            cert.institutionAcronym,
-            cert.studentName,
-            cert.studentId,
-            cert.programme,
-            cert.degreeClass,
-            cert.completionYear,
-            cert.issuedAt,
-            cert.docHash,
-            cert.ipfsCid,
-            cert.revokeReason
-        );
+        return certificates[_metaHash];
     }
 
     /**
      * @notice Returns the wallet address of the institution that issued
      *         a given certificate.
-     * @dev    Used internally and by the frontend to confirm the issuer
-     *         before allowing revocation.
      * @param  _metaHash  The certificate's unique identifier
      * @return address    The issuing institution's wallet address
      */
-    function getCertificateIssuer(bytes32 _metaHash) external view returns (address) {
+    function getCertificateIssuer(bytes32 _metaHash)
+        external
+        view
+        returns (address)
+    {
         return certificates[_metaHash].issuer;
     }
 
