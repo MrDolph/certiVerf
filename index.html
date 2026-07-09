@@ -385,8 +385,8 @@ main{max-width:900px;margin:0 auto;padding:28px 16px 80px}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 <script>
-const REGISTRY_ADDR="0x5416e493590141D710F367afA994F97A58116834";
-const CERT_ADDR="0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5";
+const REGISTRY_ADDR="0xCeB1502bD34a71eA45A3cAB6FCF5Cc8D0009A944";
+const CERT_ADDR="0x7C280568dD991f471DBe5e6eE430624B93F712fF";
 const RPC_URL="https://polygon-amoy.g.alchemy.com/v2/3RE7F8bPJ2MofC94L2tdP";
 const AMOY_ID=80002;
 const PAGE_URL=window.location.href.split("?")[0];
@@ -508,7 +508,7 @@ async function doRevoke(){
 async function loadHistory(){
   const el=document.getElementById("histContent");el.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
   try{
-    const rp=new ethers.JsonRpcProvider(RPC_URL);const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,rp);const filter=cert.filters.CertificateIssued(null,userAddress);const events=await cert.queryFilter(filter,0,"latest");
+    const rp=new ethers.JsonRpcProvider(RPC_URL);const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,rp);const filter=cert.filters.CertificateIssued(null,userAddress);const events=await cert.queryFilter(filter,41700000,"latest");
     if(!events.length){el.innerHTML=`<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`;return}
     const rows=events.map((ev,i)=>`<tr><td>${events.length-i}</td><td><strong>${ev.args.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${ev.args.studentId}</span></td><td>${ev.args.programme}</td><td>${fmtDate(ev.args.issuedAt)}</td><td><span class="mono-sm">${ev.args.metaHash.slice(0,14)}...</span><br/><button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${ev.args.metaHash}')">Copy hash</button></td></tr>`).join("");
     el.innerHTML=`<table class="hist-tbl"><thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -519,9 +519,9 @@ async function loadPending(){
   const list=document.getElementById("pendingList");list.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
   try{
     const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,provider);
-    const reqEv=await reg.queryFilter(reg.filters.RegistrationRequested(),0,"latest");
-    const appEv=await reg.queryFilter(reg.filters.RegistrationApproved(),0,"latest");
-    const rejEv=await reg.queryFilter(reg.filters.RegistrationRejected(),0,"latest");
+    const reqEv=await reg.queryFilter(reg.filters.RegistrationRequested(),41700000,"latest");
+    const appEv=await reg.queryFilter(reg.filters.RegistrationApproved(),41700000,"latest");
+    const rejEv=await reg.queryFilter(reg.filters.RegistrationRejected(),41700000,"latest");
     const app=new Set(appEv.map(e=>e.args.wallet.toLowerCase()));
     const rej=new Set(rejEv.map(e=>e.args.wallet.toLowerCase()));
     const pending=reqEv.filter(e=>!app.has(e.args.wallet.toLowerCase())&&!rej.has(e.args.wallet.toLowerCase()));
