@@ -203,6 +203,8 @@ main{max-width:900px;margin:0 auto;padding:28px 16px 80px}
       <span class="wpill-role" id="walletRole"></span>
     </div>
     <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+    <button class="btn-connect" id="disconnectBtn" onclick="disconnectWallet()"
+            style="display:none;background:#B91C1C">Disconnect</button>
   </div>
 </header>
 
@@ -437,10 +439,30 @@ async function connectWallet(){
     if(Number(net.chainId)===AMOY_ID){nb.className="net-badge show ok";nb.textContent="Polygon Amoy ✓"}
     else{nb.className="net-badge show wrong";nb.textContent="Wrong network — switch to Polygon Amoy"}
     document.getElementById("walletAddr").textContent=short(userAddress);
+    document.getElementById("disconnectBtn").style.display="block";
     document.getElementById("walletPill").classList.add("show");
     btn.textContent="Connected";
     await detectRole();
   }catch(e){btn.textContent="Connect Wallet";btn.disabled=false;console.error(e)}
+}
+
+function disconnectWallet(){
+  // Reset all state
+  provider=null;signer=null;userAddress=null;isOwner=false;isReg=false;instData=null;
+  // Reset UI
+  document.getElementById("walletPill").classList.remove("show");
+  document.getElementById("connectBtn").textContent="Connect Wallet";
+  document.getElementById("connectBtn").disabled=false;
+  document.getElementById("connectBtn").style.display="block";
+  document.getElementById("disconnectBtn").style.display="none";
+  document.getElementById("netBadge").classList.remove("show");
+  document.getElementById("roleBanner") && (document.getElementById("roleBanner").style && (document.getElementById("roleBanner").style.display="none"));
+  // Reset all portals to gate state
+  document.getElementById("instGate").style.display="block";
+  document.getElementById("instContent").style.display="none";
+  document.getElementById("adminGate").style.display="block";
+  document.getElementById("adminContent").style.display="none";
+  document.getElementById("adminDenied").style.display="none";
 }
 
 async function detectRole(){
