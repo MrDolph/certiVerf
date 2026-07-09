@@ -434,7 +434,24 @@ async function detectRole(){
     isReg=await reg.isRegistered(userAddress);
     if(isReg)instData=await reg.getInstitution(userAddress);
     const rEl=document.getElementById("walletRole");
-    if(isOwner){rEl.textContent="NUC Admin";showAdmin()}
+    if(isOwner){
+      rEl.textContent="NUC Admin";
+      showAdmin();
+      // Also initialise institution tab so switching tabs works
+      document.getElementById("instGate").style.display="none";
+      document.getElementById("instContent").style.display="block";
+      document.getElementById("instTitle").textContent="Institution Portal";
+      document.getElementById("instSub").textContent="This wallet is the NUC Admin. Switch to an institution wallet to register or issue certificates.";
+      document.getElementById("instSteps").style.display="none";
+      document.getElementById("instStatBadge").className="badge b-gray";
+      document.getElementById("instStatBadge").textContent="Admin Wallet";
+      document.getElementById("instStatDesc").textContent="NUC Admin wallets do not issue certificates";
+      document.getElementById("instStatBody").innerHTML="<p style='font-size:.875rem;color:var(--n500)'>To issue certificates, connect a registered institution wallet. This wallet is configured as the NUC regulatory admin.</p>";
+      document.getElementById("regCard").style.display="none";
+      document.getElementById("issueCard").style.display="none";
+      document.getElementById("revokeCard").style.display="none";
+      document.getElementById("histCard").style.display="none";
+    }
     else if(isReg){rEl.textContent=instData[1];showInstitution()}
     else{let pend=false;try{await reg.getPendingInstitution(userAddress);pend=true}catch{}rEl.textContent=pend?"Pending":"Unregistered";showInstitution(pend)}
   }catch(e){console.error("Role detection:",e)}
