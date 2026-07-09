@@ -508,7 +508,7 @@ async function doRevoke(){
 async function loadHistory(){
   const el=document.getElementById("histContent");el.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
   try{
-    const rp=new ethers.JsonRpcProvider(RPC_URL);const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,rp);const filter=cert.filters.CertificateIssued(null,userAddress);const curB=await rp.getBlockNumber();const fromB=Math.max(41500000,curB-5000);const events=await cert.queryFilter(filter,fromB,"latest");
+    const rp=new ethers.JsonRpcProvider(RPC_URL);const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,rp);const currentBlock=await rp.getBlockNumber();const startBlock=Math.max(0,currentBlock-500);const filter=cert.filters.CertificateIssued(null,userAddress);const events=await cert.queryFilter(filter,startBlock,"latest");
     if(!events.length){el.innerHTML=`<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`;return}
     const rows=events.map((ev,i)=>`<tr><td>${events.length-i}</td><td><strong>${ev.args.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${ev.args.studentId}</span></td><td>${ev.args.programme}</td><td>${fmtDate(ev.args.issuedAt)}</td><td><span class="mono-sm">${ev.args.metaHash.slice(0,14)}...</span><br/><button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${ev.args.metaHash}')">Copy hash</button></td></tr>`).join("");
     el.innerHTML=`<table class="hist-tbl"><thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -516,27 +516,12 @@ async function loadHistory(){
 }
 
 async function loadPending(){
-  const list=document.getElementById("pendingList");list.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
-  try{
-    const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,provider);
-    const curBlk=await provider.getBlockNumber();
-    const fromBlk=Math.max(41500000,curBlk-5000);
-    const reqEv=await reg.queryFilter(reg.filters.RegistrationRequested(),fromBlk,"latest");
-    const appEv=await reg.queryFilter(reg.filters.RegistrationApproved(),fromBlk,"latest");
-    const rejEv=await reg.queryFilter(reg.filters.RegistrationRejected(),fromBlk,"latest");
-    const app=new Set(appEv.map(e=>e.args.wallet.toLowerCase()));
-    const rej=new Set(rejEv.map(e=>e.args.wallet.toLowerCase()));
-    const pending=reqEv.filter(e=>!app.has(e.args.wallet.toLowerCase())&&!rej.has(e.args.wallet.toLowerCase()));
-    if(!pending.length){list.innerHTML=`<div class="empty"><span class="ei">✅</span><p>No pending applications at this time</p></div>`;return}
-    list.innerHTML="";
-    for(const ev of pending){
-      const addr=ev.args.wallet,name=ev.args.name,acr=ev.args.acronym;let web="";
-      try{const d=await reg.getPendingInstitution(addr);web=d[2]}catch{}
-      const item=document.createElement("div");item.className="pend-row";
-      item.innerHTML=`<div class="pend-info"><h3>${name} <span style="font-weight:400;color:var(--n500)">(${acr})</span></h3>${web?`<p>${web}</p>`:""}<div class="pend-addr">${addr}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${addr}','${name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${addr}','${name}')">✗ Reject</button></div>`;
-      list.appendChild(item);
-    }
-  }catch(e){list.innerHTML=`<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`}
+  const list=document.getElementById("pendingList");
+  list.innerHTML=`<div class="empty"><span class="ei">ℹ️</span>
+    <p style="color:var(--n700);font-size:.85rem">
+      Use the <strong>Look Up an Institution</strong> tool below.<br/>
+      Enter the institution wallet address to view its status and approve or reject.
+    </p></div>`;
 }
 
 async function doApprove(addr,name){setSt("adminSt","pending",`Approving ${name}...`);try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.approveRegistration(addr);setSt("adminSt","pending","Awaiting confirmation...");await tx.wait();setSt("adminSt","success",`${name} approved — can now issue certificates.`);await loadPending()}catch(e){setSt("adminSt","error",e.reason||e.message)}}
