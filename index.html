@@ -528,7 +528,7 @@ async function doRegister(){
   const name=document.getElementById("regName").value.trim(),acr=document.getElementById("regAcronym").value.trim(),web=document.getElementById("regWebsite").value.trim();
   if(!name||!acr){setSt("regSt","error","Institution name and acronym are required.");return}
   const btn=document.getElementById("regBtn");btn.disabled=true;setSt("regSt","pending","Submitting registration to blockchain...");
-  try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.requestRegistration(name,acr,web);setSt("regSt","pending","Transaction submitted — awaiting confirmation...");await tx.wait();setSt("regSt","success","Registration submitted. Awaiting NUC approval.");await detectRole()}
+  try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.requestRegistration(name,acr,web);setSt("regSt","pending","Transaction submitted — awaiting confirmation...");await tx.wait();setSt("regSt","success","Registration submitted successfully. Share your wallet address with the NUC Admin: "+userAddress);await detectRole()}
   catch(e){setSt("regSt","error",e.reason||e.message);btn.disabled=false}
 }
 
@@ -575,11 +575,42 @@ async function loadHistory(){
 
 async function loadPending(){
   const list=document.getElementById("pendingList");
-  list.innerHTML=`<div class="empty"><span class="ei">ℹ️</span>
-    <p style="color:var(--n700);font-size:.85rem">
-      Use the <strong>Look Up an Institution</strong> tool below.<br/>
-      Enter the institution wallet address to view its status and approve or reject.
-    </p></div>`;
+  list.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Checking for recent applications...</p></div>`;
+  try{
+    const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,provider);
+    const curBlk=await provider.getBlockNumber();
+    // Query only last 10 blocks — catches very recent registrations
+    const fromBlk=Math.max(0,curBlk-10);
+    const reqEv=await reg.queryFilter(reg.filters.RegistrationRequested(),fromBlk,"latest");
+    const appEv=await reg.queryFilter(reg.filters.RegistrationApproved(),fromBlk,"latest");
+    const rejEv=await reg.queryFilter(reg.filters.RegistrationRejected(),fromBlk,"latest");
+    const app=new Set(appEv.map(e=>e.args.wallet.toLowerCase()));
+    const rej=new Set(rejEv.map(e=>e.args.wallet.toLowerCase()));
+    const pending=reqEv.filter(e=>!app.has(e.args.wallet.toLowerCase())&&!rej.has(e.args.wallet.toLowerCase()));
+    if(pending.length>0){
+      list.innerHTML="";
+      for(const ev of pending){
+        const addr=ev.args.wallet,name=ev.args.name,acr=ev.args.acronym;
+        let web="";try{const d=await reg.getPendingInstitution(addr);web=d[2]}catch{}
+        const item=document.createElement("div");item.className="pend-row";
+        item.innerHTML=`<div class="pend-info"><h3>${name} <span style="font-weight:400;color:var(--n500)">(${acr})</span></h3>${web?`<p>${web}</p>`:""}<div class="pend-addr">${addr}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${addr}','${name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${addr}','${name}')">✗ Reject</button></div>`;
+        list.appendChild(item);
+      }
+    } else {
+      // No recent events — show lookup instruction
+      list.innerHTML=`<div class="empty"><span class="ei">ℹ️</span>
+        <p style="color:var(--n700);font-size:.85rem;line-height:1.6">
+          No applications in the last 10 blocks.<br/>
+          If an institution just registered, use the <strong>Look Up an Institution</strong> tool below — paste their wallet address to view status and approve or reject.
+        </p></div>`;
+    }
+  }catch(e){
+    list.innerHTML=`<div class="empty"><span class="ei">ℹ️</span>
+      <p style="color:var(--n700);font-size:.85rem;line-height:1.6">
+        Use the <strong>Look Up an Institution</strong> tool below.<br/>
+        Enter the institution wallet address to view its status and approve or reject.
+      </p></div>`;
+  }
 }
 
 async function doApprove(addr,name){setSt("adminSt","pending",`Approving ${name}...`);try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.approveRegistration(addr);setSt("adminSt","pending","Awaiting confirmation...");await tx.wait();setSt("adminSt","success",`${name} approved — can now issue certificates.`);await loadPending()}catch(e){setSt("adminSt","error",e.reason||e.message)}}
