@@ -1,648 +1,1613 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CertiVerf — Blockchain Certificate Verification System</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --g900:#002200;--g800:#003D00;--g700:#005500;--g600:#006B00;--g500:#008000;
-  --g400:#33A333;--g200:#A3D9A3;--g100:#D1F0D1;--g50:#EDFAED;
-  --gold:#C5922E;--gold-light:#F5D98A;--gold-bg:#FDF6E3;
-  --dark:#080C14;--dark2:#0F1520;--dark3:#182130;
-  --valid:#15803D;--revoked:#B91C1C;--pending:#B45309;
-  --white:#FFFFFF;--n50:#F8FAFC;--n100:#F1F5F9;--n200:#E2E8F0;
-  --n300:#CBD5E1;--n400:#94A3B8;--n500:#64748B;--n700:#334155;--n900:#0F172A;
-  --r:12px;--r-sm:8px;
-  --shadow:0 1px 3px rgba(0,0,0,.1),0 4px 16px rgba(0,0,0,.06);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--n100);color:var(--n900);min-height:100vh;font-size:15px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CertiVerf — Blockchain Certificate Verification System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --g900: #002200;
+      --g800: #003D00;
+      --g700: #005500;
+      --g600: #006B00;
+      --g500: #008000;
+      --g400: #33A333;
+      --g200: #A3D9A3;
+      --g100: #D1F0D1;
+      --g50: #EDFAED;
+      --gold: #C5922E;
+      --gold-light: #F5D98A;
+      --gold-bg: #FDF6E3;
+      --dark: #080C14;
+      --dark2: #0F1520;
+      --dark3: #182130;
+      --valid: #15803D;
+      --revoked: #B91C1C;
+      --pending: #B45309;
+      --white: #FFFFFF;
+      --n50: #F8FAFC;
+      --n100: #F1F5F9;
+      --n200: #E2E8F0;
+      --n300: #CBD5E1;
+      --n400: #94A3B8;
+      --n500: #64748B;
+      --n700: #334155;
+      --n900: #0F172A;
+      --r: 12px;
+      --r-sm: 8px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .1), 0 4px 16px rgba(0, 0, 0, .06);
+    }
 
-/* HEADER */
-header{background:var(--dark);padding:0 20px;height:68px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;border-bottom:2px solid var(--g500);box-shadow:0 4px 24px rgba(0,0,0,.5)}
-.brand{display:flex;align-items:center;gap:14px}
-.brand-shield{width:42px;height:42px;background:linear-gradient(135deg,var(--g500),var(--g700));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px rgba(0,128,0,.4)}
-.brand-text h1{font-family:'Playfair Display',Georgia,serif;font-size:1.35rem;font-weight:800;color:var(--white);letter-spacing:-.01em}
-.brand-text p{font-size:.68rem;color:var(--n400);margin-top:1px}
-.header-right{display:flex;align-items:center;gap:10px}
-.net-badge{background:var(--dark3);border:1px solid var(--dark3);border-radius:20px;padding:4px 12px;font-size:.7rem;font-weight:600;color:var(--n400);display:none}
-.net-badge.show{display:block}.net-badge.ok{color:var(--g400);border-color:var(--g700)}.net-badge.wrong{color:#F87171;border-color:#7F1D1D}
-.wallet-pill{background:var(--dark3);border:1px solid var(--dark3);border-radius:20px;padding:5px 14px;display:none;align-items:center;gap:8px}
-.wallet-pill.show{display:flex}
-.wpill-dot{width:8px;height:8px;border-radius:50%;background:var(--g400);flex-shrink:0}
-.wpill-addr{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--n300)}
-.wpill-role{background:var(--g700);color:var(--g100);border-radius:10px;padding:2px 8px;font-size:.62rem;font-weight:700}
-.btn-connect{background:var(--g500);color:var(--white);border:none;border-radius:8px;padding:9px 20px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s,transform .1s;letter-spacing:.02em}
-.btn-connect:hover:not(:disabled){background:var(--g600);transform:translateY(-1px)}
-.btn-connect:disabled{background:var(--n500);cursor:not-allowed;transform:none}
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
 
-/* NAV */
-nav{background:var(--white);border-bottom:1px solid var(--n200);display:flex;padding:0 20px;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:68px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.tab-btn{background:none;border:none;border-bottom:3px solid transparent;padding:15px 22px;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;color:var(--n500);cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:7px;margin-bottom:-1px}
-.tab-btn:hover{color:var(--n700)}.tab-btn.active{color:var(--g600);border-bottom-color:var(--g500)}
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--n100);
+      color: var(--n900);
+      min-height: 100vh;
+      font-size: 15px
+    }
 
-/* MAIN */
-main{max-width:900px;margin:0 auto;padding:28px 16px 80px}
-.tab-pane{display:none}.tab-pane.active{display:block}
+    /* HEADER */
+    header {
+      background: var(--dark);
+      padding: 0 20px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      border-bottom: 2px solid var(--g500);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .5)
+    }
 
-/* SECTION HEADER */
-.s-eye{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g600);margin-bottom:6px}
-.s-title{font-family:'Playfair Display',Georgia,serif;font-size:1.5rem;font-weight:800;color:var(--n900);margin-bottom:4px}
-.s-sub{font-size:.875rem;color:var(--n500);margin-bottom:24px;line-height:1.5}
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
 
-/* STEPS */
-.steps-bar{background:var(--dark);border-radius:var(--r);padding:16px 20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.step{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.step-num{width:24px;height:24px;border-radius:50%;background:var(--g500);color:var(--white);font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.step-text{font-size:.78rem;color:var(--n300);font-weight:500}
-.step-arrow{color:var(--n500);font-size:.75rem}
+    .brand-shield {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--g500), var(--g700));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 16px rgba(0, 128, 0, .4)
+    }
 
-/* CARD */
-.card{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden;border:1px solid var(--n200)}
-.card-accent{border-left:4px solid var(--g500)}
-.card-hdr{padding:18px 22px;border-bottom:1px solid var(--n200);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.card-hdr h2{font-family:'Playfair Display',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--n900)}
-.card-hdr p{font-size:.78rem;color:var(--n500);margin-top:3px}
-.card-body{padding:22px}
+    .brand-text h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -.01em
+    }
 
-/* FORMS */
-.fg{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.fg .full{grid-column:1/-1}
-.field label{display:block;font-size:.75rem;font-weight:700;color:var(--n700);margin-bottom:6px;letter-spacing:.02em}
-.field label .req{color:var(--g500);margin-left:2px}
-.field input,.field select,.field textarea{width:100%;padding:10px 14px;border:1.5px solid var(--n300);border-radius:var(--r-sm);font-size:.875rem;color:var(--n900);font-family:'Inter',sans-serif;background:var(--white);outline:none;transition:border-color .15s,box-shadow .15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g500);box-shadow:0 0 0 3px rgba(0,128,0,.12)}
-.field textarea{resize:vertical;min-height:90px;line-height:1.5}
-.field input[type="file"]{padding:8px;cursor:pointer}
-.hint{font-size:.7rem;color:var(--n400);margin-top:5px;line-height:1.4}
+    .brand-text p {
+      font-size: .68rem;
+      color: var(--n400);
+      margin-top: 1px
+    }
 
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:.875rem;font-weight:700;border:none;cursor:pointer;transition:background .15s,transform .1s;letter-spacing:.01em}
-.btn:hover:not(:disabled){transform:translateY(-1px)}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
-.btn-primary{background:var(--n900);color:var(--white)}
-.btn-green{background:var(--g500);color:var(--white);box-shadow:0 2px 8px rgba(0,128,0,.25)}
-.btn-green:hover:not(:disabled){background:var(--g600)}
-.btn-danger{background:var(--revoked);color:var(--white)}.btn-danger:hover:not(:disabled){background:#991B1B}
-.btn-ghost{background:var(--n100);color:var(--n700);border:1px solid var(--n200)}.btn-ghost:hover:not(:disabled){background:var(--n200)}
-.btn-sm{padding:7px 14px;font-size:.78rem}
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
 
-/* BADGES */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:700;letter-spacing:.05em}
-.b-green{background:var(--g100);color:var(--g700)}.b-red{background:#FEE2E2;color:var(--revoked)}
-.b-amber{background:#FEF3C7;color:var(--pending)}.b-gray{background:var(--n200);color:var(--n700)}
+    .net-badge {
+      background: var(--dark3);
+      border: 1px solid var(--dark3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: .7rem;
+      font-weight: 600;
+      color: var(--n400);
+      display: none
+    }
 
-/* TX STATUS */
-.tx-st{display:none;margin-top:14px;padding:12px 16px;border-radius:var(--r-sm);font-size:.84rem;font-weight:500;align-items:flex-start;gap:10px;line-height:1.4}
-.tx-st.show{display:flex}
-.tx-pending{background:var(--gold-bg);border:1px solid #EDD9A3;color:var(--pending)}
-.tx-success{background:var(--g50);border:1px solid var(--g200);color:var(--g700)}
-.tx-error{background:#FFF5F5;border:1px solid #FECACA;color:var(--revoked)}
-.spin{animation:spin 1s linear infinite;display:inline-block;flex-shrink:0}
-@keyframes spin{to{transform:rotate(360deg)}}
+    .net-badge.show {
+      display: block
+    }
 
-/* HASH BLOCK */
-.hash-blk{background:var(--dark);border-radius:var(--r-sm);padding:14px 16px;margin:12px 0;border:1px solid var(--dark3)}
-.hash-lbl{font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--n400);margin-bottom:7px}
-.hash-val{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#4ADE80;word-break:break-all;line-height:1.7}
-.copy-btn{font-size:.68rem;font-weight:600;color:var(--n400);background:none;border:1px solid var(--dark3);border-radius:4px;padding:2px 8px;cursor:pointer;margin-top:8px;transition:color .15s,border-color .15s;font-family:'Inter',sans-serif}
-.copy-btn:hover{color:var(--g400);border-color:var(--g700)}
+    .net-badge.ok {
+      color: var(--g400);
+      border-color: var(--g700)
+    }
 
-/* VERIFY HERO */
-.cert-hero{text-align:center;padding:32px 20px 20px;border-bottom:1px solid var(--n200);margin-bottom:20px}
-.shield-icon{font-size:5rem;line-height:1;margin-bottom:12px;display:block}
-.shield-valid{animation:pulse-v 2.5s ease-in-out infinite}
-.shield-revoked{animation:shake-r 0.5s ease-in-out 1}
-@keyframes pulse-v{0%,100%{filter:drop-shadow(0 0 8px rgba(0,200,0,.3));transform:scale(1)}50%{filter:drop-shadow(0 0 24px rgba(0,200,0,.6));transform:scale(1.06)}}
-@keyframes shake-r{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-.result-title{font-family:'Playfair Display',Georgia,serif;font-size:1.6rem;font-weight:800;margin-bottom:4px}
-.result-title.valid{color:var(--valid)}.result-title.revoked{color:var(--revoked)}
-.result-sub{font-size:.82rem;color:var(--n500)}
+    .net-badge.wrong {
+      color: #F87171;
+      border-color: #7F1D1D
+    }
 
-/* CERT GRID */
-.cert-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.cf{background:var(--n50);border-radius:8px;padding:12px 14px;border-left:3px solid var(--g500)}
-.cf.full{grid-column:1/-1}.cf.alert{border-left-color:var(--revoked);background:#FFF5F5}
-.cf-lbl{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--n400);margin-bottom:4px}
-.cf-val{font-size:.9rem;font-weight:600;color:var(--n900);word-break:break-all}
-.cf-val.mono{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:400}
+    .wallet-pill {
+      background: var(--dark3);
+      border: 1px solid var(--dark3);
+      border-radius: 20px;
+      padding: 5px 14px;
+      display: none;
+      align-items: center;
+      gap: 8px
+    }
 
-/* QR */
-.qr-sec{display:flex;flex-direction:column;align-items:center;padding:20px;background:var(--n50);border-radius:var(--r-sm);border:1px solid var(--n200);margin-top:16px}
-.qr-sec img{border-radius:8px;border:3px solid var(--white);box-shadow:var(--shadow)}
-.qr-lbl{font-size:.75rem;color:var(--n500);margin-top:10px;text-align:center}
+    .wallet-pill.show {
+      display: flex
+    }
 
-/* RESULT ACTIONS */
-.result-acts{display:flex;gap:10px;flex-wrap:wrap;padding:16px 22px;border-top:1px solid var(--n200);background:var(--n50)}
+    .wpill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--g400);
+      flex-shrink: 0
+    }
 
-/* HISTORY TABLE */
-.hist-tbl{width:100%;border-collapse:collapse;font-size:.8rem}
-.hist-tbl th{text-align:left;padding:10px 12px;background:var(--n900);color:var(--white);font-weight:600;font-size:.72rem;letter-spacing:.04em}
-.hist-tbl td{padding:10px 12px;border-bottom:1px solid var(--n200);color:var(--n700);vertical-align:middle}
-.hist-tbl tr:hover td{background:var(--g50)}
-.mono-sm{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--n500)}
+    .wpill-addr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .72rem;
+      color: var(--n300)
+    }
 
-/* PENDING ROW */
-.pend-row{display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--n200);border-radius:var(--r-sm);margin-bottom:10px;transition:border-color .15s}
-.pend-row:hover{border-color:var(--g400)}
-.pend-info{flex:1;min-width:0}
-.pend-info h3{font-size:.9rem;font-weight:700;color:var(--n900)}
-.pend-info p{font-size:.78rem;color:var(--n500);margin-top:2px}
-.pend-addr{font-family:'JetBrains Mono',monospace;font-size:.67rem;color:var(--n400);margin-top:5px;word-break:break-all}
-.pend-acts{display:flex;gap:8px;flex-shrink:0;margin-top:4px}
+    .wpill-role {
+      background: var(--g700);
+      color: var(--g100);
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: .62rem;
+      font-weight: 700
+    }
 
-/* GATE */
-.gate{text-align:center;padding:60px 20px}
-.gate-icon{font-size:3rem;margin-bottom:14px;display:block}
-.gate h3{font-family:'Playfair Display',Georgia,serif;font-size:1.25rem;font-weight:800;color:var(--n900);margin-bottom:8px}
-.gate p{font-size:.875rem;color:var(--n500);margin-bottom:22px;line-height:1.6;max-width:400px;margin-left:auto;margin-right:auto}
+    .btn-connect {
+      background: var(--g500);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background .15s, transform .1s;
+      letter-spacing: .02em
+    }
 
-.divider{height:1px;background:var(--n200);margin:20px 0}
-.empty{text-align:center;padding:40px 20px;color:var(--n400)}
-.empty .ei{font-size:2rem;margin-bottom:10px;display:block}
+    .btn-connect:hover:not(:disabled) {
+      background: var(--g600);
+      transform: translateY(-1px)
+    }
 
-/* PRINT */
-@media print{
-  header,nav,.result-acts,.steps-bar,#verifyInput{display:none!important}
-  body{background:white}.card{box-shadow:none;border:1px solid #ccc}
-  .tab-pane{display:block!important}
-  #pane-institution,#pane-admin{display:none!important}
-}
+    .btn-connect:disabled {
+      background: var(--n500);
+      cursor: not-allowed;
+      transform: none
+    }
 
-/* MOBILE */
-@media(max-width:600px){
-  .fg{grid-template-columns:1fr}.fg .full{grid-column:1}
-  .cert-grid{grid-template-columns:1fr}.cf.full{grid-column:1}
-  .pend-row{flex-direction:column}.pend-acts{width:100%}.pend-acts .btn{flex:1;justify-content:center}
-  .steps-bar{flex-direction:column;align-items:flex-start}.step-arrow{display:none}
-  .result-acts{flex-direction:column}.result-acts .btn{width:100%;justify-content:center}
-  .brand-text p{display:none}.net-badge{display:none!important}
-  main{padding:16px 12px 80px}
-  header{padding:0 14px}
-  nav{padding:0 12px}.tab-btn{padding:12px 14px;font-size:.78rem}
-}
-</style>
+    /* NAV */
+    nav {
+      background: var(--white);
+      border-bottom: 1px solid var(--n200);
+      display: flex;
+      padding: 0 20px;
+      gap: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      position: sticky;
+      top: 68px;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 15px 22px;
+      font-family: 'Inter', sans-serif;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--n500);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: -1px
+    }
+
+    .tab-btn:hover {
+      color: var(--n700)
+    }
+
+    .tab-btn.active {
+      color: var(--g600);
+      border-bottom-color: var(--g500)
+    }
+
+    /* MAIN */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 16px 80px
+    }
+
+    .tab-pane {
+      display: none
+    }
+
+    .tab-pane.active {
+      display: block
+    }
+
+    /* SECTION HEADER */
+    .s-eye {
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--g600);
+      margin-bottom: 6px
+    }
+
+    .s-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--n900);
+      margin-bottom: 4px
+    }
+
+    .s-sub {
+      font-size: .875rem;
+      color: var(--n500);
+      margin-bottom: 24px;
+      line-height: 1.5
+    }
+
+    /* STEPS */
+    .steps-bar {
+      background: var(--dark);
+      border-radius: var(--r);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--g500);
+      color: var(--white);
+      font-size: .72rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .step-text {
+      font-size: .78rem;
+      color: var(--n300);
+      font-weight: 500
+    }
+
+    .step-arrow {
+      color: var(--n500);
+      font-size: .75rem
+    }
+
+    /* CARD */
+    .card {
+      background: var(--white);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden;
+      border: 1px solid var(--n200)
+    }
+
+    .card-accent {
+      border-left: 4px solid var(--g500)
+    }
+
+    .card-hdr {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--n200);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    .card-hdr h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--n900)
+    }
+
+    .card-hdr p {
+      font-size: .78rem;
+      color: var(--n500);
+      margin-top: 3px
+    }
+
+    .card-body {
+      padding: 22px
+    }
+
+    /* FORMS */
+    .fg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px
+    }
+
+    .fg .full {
+      grid-column: 1/-1
+    }
+
+    .field label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--n700);
+      margin-bottom: 6px;
+      letter-spacing: .02em
+    }
+
+    .field label .req {
+      color: var(--g500);
+      margin-left: 2px
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--n300);
+      border-radius: var(--r-sm);
+      font-size: .875rem;
+      color: var(--n900);
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--g500);
+      box-shadow: 0 0 0 3px rgba(0, 128, 0, .12)
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 90px;
+      line-height: 1.5
+    }
+
+    .field input[type="file"] {
+      padding: 8px;
+      cursor: pointer
+    }
+
+    .hint {
+      font-size: .7rem;
+      color: var(--n400);
+      margin-top: 5px;
+      line-height: 1.4
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 22px;
+      border-radius: var(--r-sm);
+      font-family: 'Inter', sans-serif;
+      font-size: .875rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      letter-spacing: .01em
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px)
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none !important
+    }
+
+    .btn-primary {
+      background: var(--n900);
+      color: var(--white)
+    }
+
+    .btn-green {
+      background: var(--g500);
+      color: var(--white);
+      box-shadow: 0 2px 8px rgba(0, 128, 0, .25)
+    }
+
+    .btn-green:hover:not(:disabled) {
+      background: var(--g600)
+    }
+
+    .btn-danger {
+      background: var(--revoked);
+      color: var(--white)
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #991B1B
+    }
+
+    .btn-ghost {
+      background: var(--n100);
+      color: var(--n700);
+      border: 1px solid var(--n200)
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--n200)
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: .78rem
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .05em
+    }
+
+    .b-green {
+      background: var(--g100);
+      color: var(--g700)
+    }
+
+    .b-red {
+      background: #FEE2E2;
+      color: var(--revoked)
+    }
+
+    .b-amber {
+      background: #FEF3C7;
+      color: var(--pending)
+    }
+
+    .b-gray {
+      background: var(--n200);
+      color: var(--n700)
+    }
+
+    /* TX STATUS */
+    .tx-st {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: var(--r-sm);
+      font-size: .84rem;
+      font-weight: 500;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.4
+    }
+
+    .tx-st.show {
+      display: flex
+    }
+
+    .tx-pending {
+      background: var(--gold-bg);
+      border: 1px solid #EDD9A3;
+      color: var(--pending)
+    }
+
+    .tx-success {
+      background: var(--g50);
+      border: 1px solid var(--g200);
+      color: var(--g700)
+    }
+
+    .tx-error {
+      background: #FFF5F5;
+      border: 1px solid #FECACA;
+      color: var(--revoked)
+    }
+
+    .spin {
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      flex-shrink: 0
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* HASH BLOCK */
+    .hash-blk {
+      background: var(--dark);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+      margin: 12px 0;
+      border: 1px solid var(--dark3)
+    }
+
+    .hash-lbl {
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--n400);
+      margin-bottom: 7px
+    }
+
+    .hash-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .78rem;
+      color: #4ADE80;
+      word-break: break-all;
+      line-height: 1.7
+    }
+
+    .copy-btn {
+      font-size: .68rem;
+      font-weight: 600;
+      color: var(--n400);
+      background: none;
+      border: 1px solid var(--dark3);
+      border-radius: 4px;
+      padding: 2px 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: color .15s, border-color .15s;
+      font-family: 'Inter', sans-serif
+    }
+
+    .copy-btn:hover {
+      color: var(--g400);
+      border-color: var(--g700)
+    }
+
+    /* VERIFY HERO */
+    .cert-hero {
+      text-align: center;
+      padding: 32px 20px 20px;
+      border-bottom: 1px solid var(--n200);
+      margin-bottom: 20px
+    }
+
+    .shield-icon {
+      font-size: 5rem;
+      line-height: 1;
+      margin-bottom: 12px;
+      display: block
+    }
+
+    .shield-valid {
+      animation: pulse-v 2.5s ease-in-out infinite
+    }
+
+    .shield-revoked {
+      animation: shake-r 0.5s ease-in-out 1
+    }
+
+    @keyframes pulse-v {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 8px rgba(0, 200, 0, .3));
+        transform: scale(1)
+      }
+
+      50% {
+        filter: drop-shadow(0 0 24px rgba(0, 200, 0, .6));
+        transform: scale(1.06)
+      }
+    }
+
+    @keyframes shake-r {
+
+      0%,
+      100% {
+        transform: translateX(0)
+      }
+
+      20% {
+        transform: translateX(-6px)
+      }
+
+      40% {
+        transform: translateX(6px)
+      }
+
+      60% {
+        transform: translateX(-4px)
+      }
+
+      80% {
+        transform: translateX(4px)
+      }
+    }
+
+    .result-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 4px
+    }
+
+    .result-title.valid {
+      color: var(--valid)
+    }
+
+    .result-title.revoked {
+      color: var(--revoked)
+    }
+
+    .result-sub {
+      font-size: .82rem;
+      color: var(--n500)
+    }
+
+    /* CERT GRID */
+    .cert-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .cf {
+      background: var(--n50);
+      border-radius: 8px;
+      padding: 12px 14px;
+      border-left: 3px solid var(--g500)
+    }
+
+    .cf.full {
+      grid-column: 1/-1
+    }
+
+    .cf.alert {
+      border-left-color: var(--revoked);
+      background: #FFF5F5
+    }
+
+    .cf-lbl {
+      font-size: .67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--n400);
+      margin-bottom: 4px
+    }
+
+    .cf-val {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--n900);
+      word-break: break-all
+    }
+
+    .cf-val.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .75rem;
+      font-weight: 400
+    }
+
+    /* QR */
+    .qr-sec {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: var(--n50);
+      border-radius: var(--r-sm);
+      border: 1px solid var(--n200);
+      margin-top: 16px
+    }
+
+    .qr-sec img {
+      border-radius: 8px;
+      border: 3px solid var(--white);
+      box-shadow: var(--shadow)
+    }
+
+    .qr-lbl {
+      font-size: .75rem;
+      color: var(--n500);
+      margin-top: 10px;
+      text-align: center
+    }
+
+    /* RESULT ACTIONS */
+    .result-acts {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 16px 22px;
+      border-top: 1px solid var(--n200);
+      background: var(--n50)
+    }
+
+    /* HISTORY TABLE */
+    .hist-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .8rem
+    }
+
+    .hist-tbl th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--n900);
+      color: var(--white);
+      font-weight: 600;
+      font-size: .72rem;
+      letter-spacing: .04em
+    }
+
+    .hist-tbl td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--n200);
+      color: var(--n700);
+      vertical-align: middle
+    }
+
+    .hist-tbl tr:hover td {
+      background: var(--g50)
+    }
+
+    .mono-sm {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .68rem;
+      color: var(--n500)
+    }
+
+    /* PENDING ROW */
+    .pend-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--n200);
+      border-radius: var(--r-sm);
+      margin-bottom: 10px;
+      transition: border-color .15s
+    }
+
+    .pend-row:hover {
+      border-color: var(--g400)
+    }
+
+    .pend-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .pend-info h3 {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--n900)
+    }
+
+    .pend-info p {
+      font-size: .78rem;
+      color: var(--n500);
+      margin-top: 2px
+    }
+
+    .pend-addr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .67rem;
+      color: var(--n400);
+      margin-top: 5px;
+      word-break: break-all
+    }
+
+    .pend-acts {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      margin-top: 4px
+    }
+
+    /* GATE */
+    .gate {
+      text-align: center;
+      padding: 60px 20px
+    }
+
+    .gate-icon {
+      font-size: 3rem;
+      margin-bottom: 14px;
+      display: block
+    }
+
+    .gate h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--n900);
+      margin-bottom: 8px
+    }
+
+    .gate p {
+      font-size: .875rem;
+      color: var(--n500);
+      margin-bottom: 22px;
+      line-height: 1.6;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--n200);
+      margin: 20px 0
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--n400)
+    }
+
+    .empty .ei {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      display: block
+    }
+
+    /* PRINT */
+    @media print {
+
+      header,
+      nav,
+      .result-acts,
+      .steps-bar,
+      #verifyInput {
+        display: none !important
+      }
+
+      body {
+        background: white
+      }
+
+      .card {
+        box-shadow: none;
+        border: 1px solid #ccc
+      }
+
+      .tab-pane {
+        display: block !important
+      }
+
+      #pane-institution,
+      #pane-admin {
+        display: none !important
+      }
+    }
+
+    /* MOBILE */
+    @media(max-width:600px) {
+      .fg {
+        grid-template-columns: 1fr
+      }
+
+      .fg .full {
+        grid-column: 1
+      }
+
+      .cert-grid {
+        grid-template-columns: 1fr
+      }
+
+      .cf.full {
+        grid-column: 1
+      }
+
+      .pend-row {
+        flex-direction: column
+      }
+
+      .pend-acts {
+        width: 100%
+      }
+
+      .pend-acts .btn {
+        flex: 1;
+        justify-content: center
+      }
+
+      .steps-bar {
+        flex-direction: column;
+        align-items: flex-start
+      }
+
+      .step-arrow {
+        display: none
+      }
+
+      .result-acts {
+        flex-direction: column
+      }
+
+      .result-acts .btn {
+        width: 100%;
+        justify-content: center
+      }
+
+      .brand-text p {
+        display: none
+      }
+
+      .net-badge {
+        display: none !important
+      }
+
+      main {
+        padding: 16px 12px 80px
+      }
+
+      header {
+        padding: 0 14px
+      }
+
+      nav {
+        padding: 0 12px
+      }
+
+      .tab-btn {
+        padding: 12px 14px;
+        font-size: .78rem
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<header>
-  <div class="brand">
-    <div class="brand-shield">🛡️</div>
-    <div class="brand-text">
-      <h1>CertiVerf</h1>
-      <p>Blockchain Certificate Verification · NOUN MSc CIT899 Prototype</p>
-    </div>
-  </div>
-  <div class="header-right">
-    <span class="net-badge" id="netBadge"></span>
-    <div class="wallet-pill" id="walletPill">
-      <span class="wpill-dot"></span>
-      <span class="wpill-addr" id="walletAddr"></span>
-      <span class="wpill-role" id="walletRole"></span>
-    </div>
-    <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
-    <button class="btn-connect" id="disconnectBtn" onclick="disconnectWallet()"
-            style="display:none;background:#B91C1C">Disconnect</button>
-  </div>
-</header>
-
-<nav>
-  <button class="tab-btn active" id="tab-verify" onclick="switchTab('verify')">🔍 Verify Certificate</button>
-  <button class="tab-btn" id="tab-institution" onclick="switchTab('institution')">🎓 Institution Portal</button>
-  <button class="tab-btn" id="tab-admin" onclick="switchTab('admin')">🏛️ NUC Admin</button>
-</nav>
-
-<main>
-
-<!-- VERIFY TAB -->
-<div class="tab-pane active" id="pane-verify">
-  <div class="s-eye">Public Verification — No Wallet Required</div>
-  <div class="s-title">Verify a Certificate</div>
-  <div class="s-sub">Enter the certificate's unique blockchain hash to instantly verify its authenticity. Data is read directly from the Polygon Amoy blockchain — tamper-evident and permanent.</div>
-
-  <div class="steps-bar">
-    <div class="step"><span class="step-num">1</span><span class="step-text">Get the hash from the graduate or scan the QR code</span></div>
-    <span class="step-arrow">→</span>
-    <div class="step"><span class="step-num">2</span><span class="step-text">Paste it below and click Verify</span></div>
-    <span class="step-arrow">→</span>
-    <div class="step"><span class="step-num">3</span><span class="step-text">Blockchain returns tamper-evident result instantly</span></div>
-  </div>
-
-  <div class="card card-accent" id="verifyInput">
-    <div class="card-body">
-      <div class="field">
-        <label>Certificate Hash (metaHash) <span class="req">*</span></label>
-        <input type="text" id="verifyHash" style="font-family:'JetBrains Mono',monospace;font-size:.8rem"
-               placeholder="0x0ffdf8e50a445961d32e8d85dddcb73106185a8d70345d35dda551b06f030dba"/>
-        <div class="hint">66-character hash starting with 0x — found on the physical certificate or QR code</div>
-      </div>
-      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-green" id="verifyBtn" onclick="runVerify()">🔍 Verify Certificate</button>
-        <button class="btn btn-ghost" onclick="clearResult()">Clear</button>
-      </div>
-      <div class="tx-st" id="verifySt"></div>
-    </div>
-  </div>
-
-  <div class="card" id="certCard" style="display:none">
-    <div class="cert-hero" id="certHero"></div>
-    <div class="card-body">
-      <div class="cert-grid" id="certFields"></div>
-      <div class="qr-sec" id="qrSec" style="display:none">
-        <img id="qrImg" alt="QR Code" width="200" height="200"/>
-        <div class="qr-lbl">Scan to verify this certificate on any device</div>
+  <header>
+    <div class="brand">
+      <div class="brand-shield">🛡️</div>
+      <div class="brand-text">
+        <h1>CertiVerf</h1>
+        <p>Blockchain Certificate Verification · NOUN MSc CIT899 Prototype</p>
       </div>
     </div>
-    <div class="result-acts" id="resultActs"></div>
-  </div>
-</div>
-
-<!-- INSTITUTION TAB -->
-<div class="tab-pane" id="pane-institution">
-  <div class="gate" id="instGate">
-    <span class="gate-icon">🎓</span>
-    <h3>Institution Portal</h3>
-    <p>Connect your institution's MetaMask wallet to register with NUC, issue certificates to graduates, and manage your credential records.</p>
-    <button class="btn btn-green" onclick="connectWallet()">Connect Wallet</button>
-  </div>
-
-  <div id="instContent" style="display:none">
-    <div class="s-eye">Institution Portal</div>
-    <div class="s-title" id="instTitle">Welcome</div>
-    <div class="s-sub" id="instSub"></div>
-    <div class="steps-bar" id="instSteps"></div>
-
-    <div class="card card-accent" id="instStatCard">
-      <div class="card-hdr">
-        <div><h2>Registration Status</h2><p id="instStatDesc"></p></div>
-        <span class="badge" id="instStatBadge"></span>
+    <div class="header-right">
+      <span class="net-badge" id="netBadge"></span>
+      <div class="wallet-pill" id="walletPill">
+        <span class="wpill-dot"></span>
+        <span class="wpill-addr" id="walletAddr"></span>
+        <span class="wpill-role" id="walletRole"></span>
       </div>
-      <div class="card-body" id="instStatBody"></div>
+      <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+      <button class="btn-connect" id="disconnectBtn" onclick="disconnectWallet()"
+        style="display:none;background:#B91C1C">Disconnect</button>
     </div>
+  </header>
 
-    <div class="card" id="regCard" style="display:none">
-      <div class="card-hdr"><div><h2>Register with NUC</h2><p>Submit your institution's details for regulatory approval</p></div></div>
-      <div class="card-body">
-        <div class="fg">
-          <div class="field full"><label>Full Official Institution Name <span class="req">*</span></label><input type="text" id="regName" placeholder="e.g. University of Lagos"/></div>
-          <div class="field"><label>Acronym <span class="req">*</span></label><input type="text" id="regAcronym" placeholder="e.g. UNILAG"/></div>
-          <div class="field"><label>Official Website</label><input type="text" id="regWebsite" placeholder="e.g. https://unilag.edu.ng"/></div>
+  <nav>
+    <button class="tab-btn active" id="tab-verify" onclick="switchTab('verify')">🔍 Verify Certificate</button>
+    <button class="tab-btn" id="tab-institution" onclick="switchTab('institution')">🎓 Institution Portal</button>
+    <button class="tab-btn" id="tab-admin" onclick="switchTab('admin')">🏛️ NUC Admin</button>
+  </nav>
+
+  <main>
+
+    <!-- VERIFY TAB -->
+    <div class="tab-pane active" id="pane-verify">
+      <div class="s-eye">Public Verification — No Wallet Required</div>
+      <div class="s-title">Verify a Certificate</div>
+      <div class="s-sub">Enter the certificate's unique blockchain hash to instantly verify its authenticity. Data is
+        read directly from the Polygon Amoy blockchain — tamper-evident and permanent.</div>
+
+      <div class="steps-bar">
+        <div class="step"><span class="step-num">1</span><span class="step-text">Get the hash from the graduate or scan
+            the QR code</span></div>
+        <span class="step-arrow">→</span>
+        <div class="step"><span class="step-num">2</span><span class="step-text">Paste it below and click Verify</span>
         </div>
-        <div style="margin-top:18px"><button class="btn btn-primary" id="regBtn" onclick="doRegister()">Submit Registration to NUC</button></div>
-        <div class="tx-st" id="regSt"></div>
+        <span class="step-arrow">→</span>
+        <div class="step"><span class="step-num">3</span><span class="step-text">Blockchain returns tamper-evident
+            result instantly</span></div>
       </div>
-    </div>
 
-    <div class="card" id="issueCard" style="display:none">
-      <div class="card-hdr"><div><h2>Issue a Certificate</h2><p>All data is permanently stored on the blockchain — review before submitting</p></div></div>
-      <div class="card-body">
-        <div class="fg">
-          <div class="field"><label>Student Full Name <span class="req">*</span></label><input type="text" id="stuName" placeholder="e.g. Fatai Olalekan"/></div>
-          <div class="field"><label>Student Matric / ID <span class="req">*</span></label><input type="text" id="stuId" placeholder="e.g. CSC/2020/001"/></div>
-          <div class="field full"><label>Degree Programme <span class="req">*</span></label><input type="text" id="stuProg" placeholder="e.g. Bachelor of Science in Computer Science"/></div>
-          <div class="field"><label>Degree Classification <span class="req">*</span></label>
-            <select id="stuClass"><option value="">Select...</option><option>First Class</option><option>Second Class Upper</option><option>Second Class Lower</option><option>Third Class</option><option>Pass</option><option>Distinction</option><option>Merit</option></select>
+      <div class="card card-accent" id="verifyInput">
+        <div class="card-body">
+          <div class="field">
+            <label>Certificate Hash (metaHash) <span class="req">*</span></label>
+            <input type="text" id="verifyHash" style="font-family:'JetBrains Mono',monospace;font-size:.8rem"
+              placeholder="0x0ffdf8e50a445961d32e8d85dddcb73106185a8d70345d35dda551b06f030dba" />
+            <div class="hint">66-character hash starting with 0x — found on the physical certificate or QR code</div>
           </div>
-          <div class="field"><label>Completion Year <span class="req">*</span></label><input type="number" id="stuYear" placeholder="2024" min="1960" max="2100"/></div>
-          <div class="field full"><label>Graduate Email Address</label><input type="email" id="stuEmail" placeholder="e.g. graduate@unilag.edu.ng"/></div>
-          <div class="field"><label>Certificate PDF</label><input type="file" id="certPdf" accept=".pdf" onchange="onPdf(this)"/><div class="hint">Upload to auto-compute SHA-256 document fingerprint (docHash)</div></div>
-          <div class="field"><label>IPFS CID (from Pinata)</label><input type="text" id="stuIpfs" placeholder="QmXoypizjW3Wkn..."/><div class="hint">Upload the PDF to Pinata first, paste the CID here</div></div>
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-green" id="verifyBtn" onclick="runVerify()">🔍 Verify Certificate</button>
+            <button class="btn btn-ghost" onclick="clearResult()">Clear</button>
+          </div>
+          <div class="tx-st" id="verifySt"></div>
         </div>
-        <div id="docHashDiv" style="display:none">
-          <div class="hash-blk"><div class="hash-lbl">Document Fingerprint computed — SHA-256 (docHash)</div><div class="hash-val" id="docHashVal"></div><button class="copy-btn" onclick="copyTxt(document.getElementById('docHashVal').textContent)">Copy hash</button></div>
+      </div>
+
+      <div class="card" id="certCard" style="display:none">
+        <div class="cert-hero" id="certHero"></div>
+        <div class="card-body">
+          <div class="cert-grid" id="certFields"></div>
+          <div class="qr-sec" id="qrSec" style="display:none">
+            <img id="qrImg" alt="QR Code" width="200" height="200" />
+            <div class="qr-lbl">Scan to verify this certificate on any device</div>
+          </div>
         </div>
-        <div class="divider"></div>
-        <button class="btn btn-green" id="issueBtn" onclick="doIssue()">🔗 Issue Certificate on Blockchain</button>
-        <div class="tx-st" id="issueSt"></div>
-        <div id="issueResult" style="display:none">
-          <div class="hash-blk"><div class="hash-lbl">Certificate Issued — Unique Hash (metaHash)</div><div class="hash-val" id="issuedHash"></div><button class="copy-btn" onclick="copyTxt(document.getElementById('issuedHash').textContent)">Copy hash</button></div>
-          <div class="qr-sec" id="issueQR" style="display:none"><img id="issueQRImg" alt="Certificate QR Code" width="200" height="200"/><div class="qr-lbl">Share this QR code with the graduate — links directly to certificate verification</div></div>
-          <p style="font-size:.78rem;color:var(--n500);margin-top:12px">Save this hash. It is the graduate's certificate identifier for all future verification.</p>
+        <div class="result-acts" id="resultActs"></div>
+      </div>
+    </div>
+
+    <!-- INSTITUTION TAB -->
+    <div class="tab-pane" id="pane-institution">
+      <div class="gate" id="instGate">
+        <span class="gate-icon">🎓</span>
+        <h3>Institution Portal</h3>
+        <p>Connect your institution's MetaMask wallet to register with NUC, issue certificates to graduates, and manage
+          your credential records.</p>
+        <button class="btn btn-green" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+
+      <div id="instContent" style="display:none">
+        <div class="s-eye">Institution Portal</div>
+        <div class="s-title" id="instTitle">Welcome</div>
+        <div class="s-sub" id="instSub"></div>
+        <div class="steps-bar" id="instSteps"></div>
+
+        <div class="card card-accent" id="instStatCard">
+          <div class="card-hdr">
+            <div>
+              <h2>Registration Status</h2>
+              <p id="instStatDesc"></p>
+            </div>
+            <span class="badge" id="instStatBadge"></span>
+          </div>
+          <div class="card-body" id="instStatBody"></div>
+        </div>
+
+        <div class="card" id="regCard" style="display:none">
+          <div class="card-hdr">
+            <div>
+              <h2>Register with NUC</h2>
+              <p>Submit your institution's details for regulatory approval</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="fg">
+              <div class="field full"><label>Full Official Institution Name <span class="req">*</span></label><input
+                  type="text" id="regName" placeholder="e.g. University of Lagos" /></div>
+              <div class="field"><label>Acronym <span class="req">*</span></label><input type="text" id="regAcronym"
+                  placeholder="e.g. UNILAG" /></div>
+              <div class="field"><label>Official Website</label><input type="text" id="regWebsite"
+                  placeholder="e.g. https://unilag.edu.ng" /></div>
+            </div>
+            <div style="margin-top:18px"><button class="btn btn-primary" id="regBtn" onclick="doRegister()">Submit
+                Registration to NUC</button></div>
+            <div class="tx-st" id="regSt"></div>
+          </div>
+        </div>
+
+        <div class="card" id="issueCard" style="display:none">
+          <div class="card-hdr">
+            <div>
+              <h2>Issue a Certificate</h2>
+              <p>All data is permanently stored on the blockchain — review before submitting</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="fg">
+              <div class="field"><label>Student Full Name <span class="req">*</span></label><input type="text"
+                  id="stuName" placeholder="e.g. Fatai Olalekan" /></div>
+              <div class="field"><label>Student Matric / ID <span class="req">*</span></label><input type="text"
+                  id="stuId" placeholder="e.g. CSC/2020/001" /></div>
+              <div class="field full"><label>Degree Programme <span class="req">*</span></label><input type="text"
+                  id="stuProg" placeholder="e.g. Bachelor of Science in Computer Science" /></div>
+              <div class="field"><label>Degree Classification <span class="req">*</span></label>
+                <select id="stuClass">
+                  <option value="">Select...</option>
+                  <option>First Class</option>
+                  <option>Second Class Upper</option>
+                  <option>Second Class Lower</option>
+                  <option>Third Class</option>
+                  <option>Pass</option>
+                  <option>Distinction</option>
+                  <option>Merit</option>
+                </select>
+              </div>
+              <div class="field"><label>Completion Year <span class="req">*</span></label><input type="number"
+                  id="stuYear" placeholder="2024" min="1960" max="2100" /></div>
+              <div class="field full"><label>Graduate Email Address</label><input type="email" id="stuEmail"
+                  placeholder="e.g. graduate@unilag.edu.ng" /></div>
+              <div class="field"><label>Certificate PDF</label><input type="file" id="certPdf" accept=".pdf"
+                  onchange="onPdf(this)" />
+                <div class="hint">Upload to auto-compute SHA-256 document fingerprint (docHash)</div>
+              </div>
+              <div class="field"><label>IPFS CID (from Pinata)</label><input type="text" id="stuIpfs"
+                  placeholder="QmXoypizjW3Wkn..." />
+                <div class="hint">Upload the PDF to Pinata first, paste the CID here</div>
+              </div>
+            </div>
+            <div id="docHashDiv" style="display:none">
+              <div class="hash-blk">
+                <div class="hash-lbl">Document Fingerprint computed — SHA-256 (docHash)</div>
+                <div class="hash-val" id="docHashVal"></div><button class="copy-btn"
+                  onclick="copyTxt(document.getElementById('docHashVal').textContent)">Copy hash</button>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <button class="btn btn-green" id="issueBtn" onclick="doIssue()">🔗 Issue Certificate on Blockchain</button>
+            <div class="tx-st" id="issueSt"></div>
+            <div id="issueResult" style="display:none">
+              <div class="hash-blk">
+                <div class="hash-lbl">Certificate Issued — Unique Hash (metaHash)</div>
+                <div class="hash-val" id="issuedHash"></div><button class="copy-btn"
+                  onclick="copyTxt(document.getElementById('issuedHash').textContent)">Copy hash</button>
+              </div>
+              <div class="qr-sec" id="issueQR" style="display:none"><img id="issueQRImg" alt="Certificate QR Code"
+                  width="200" height="200" />
+                <div class="qr-lbl">Share this QR code with the graduate — links directly to certificate verification
+                </div>
+              </div>
+              <p style="font-size:.78rem;color:var(--n500);margin-top:12px">Save this hash. It is the graduate's
+                certificate identifier for all future verification.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="revokeCard" style="display:none">
+          <div class="card-hdr">
+            <div>
+              <h2>Revoke a Certificate</h2>
+              <p>Permanent — the reason will be stored on-chain as an auditable record</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="fg">
+              <div class="field full"><label>Certificate Hash (metaHash) <span class="req">*</span></label><input
+                  type="text" id="revokeHash" style="font-family:'JetBrains Mono',monospace;font-size:.8rem"
+                  placeholder="0x..." /></div>
+              <div class="field full"><label>Reason for Revocation <span class="req">*</span></label><textarea
+                  id="revokeReason" placeholder="e.g. Certificate issued in error — student record mismatch"></textarea>
+              </div>
+            </div>
+            <button class="btn btn-danger" id="revokeBtn" onclick="doRevoke()">Revoke Certificate</button>
+            <div class="tx-st" id="revokeSt"></div>
+          </div>
+        </div>
+
+        <div class="card" id="histCard" style="display:none">
+          <div class="card-hdr">
+            <div>
+              <h2>Issued Certificate History</h2>
+              <p>All certificates issued by your institution — queried live from blockchain events</p>
+            </div><button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Refresh</button>
+          </div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <div id="histContent" style="padding:20px">
+              <div class="empty"><span class="ei">📋</span>
+                <p>Click Refresh to load your certificate history</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card" id="revokeCard" style="display:none">
-      <div class="card-hdr"><div><h2>Revoke a Certificate</h2><p>Permanent — the reason will be stored on-chain as an auditable record</p></div></div>
-      <div class="card-body">
-        <div class="fg">
-          <div class="field full"><label>Certificate Hash (metaHash) <span class="req">*</span></label><input type="text" id="revokeHash" style="font-family:'JetBrains Mono',monospace;font-size:.8rem" placeholder="0x..."/></div>
-          <div class="field full"><label>Reason for Revocation <span class="req">*</span></label><textarea id="revokeReason" placeholder="e.g. Certificate issued in error — student record mismatch"></textarea></div>
+    <!-- ADMIN TAB -->
+    <div class="tab-pane" id="pane-admin">
+      <div class="gate" id="adminGate">
+        <span class="gate-icon">🏛️</span>
+        <h3>NUC Regulatory Admin</h3>
+        <p>Connect the wallet that deployed the InstitutionRegistry contract. This portal allows the regulatory
+          authority to approve or reject institution applications.</p>
+        <button class="btn btn-green" onclick="connectWallet()">Connect Admin Wallet</button>
+      </div>
+      <div class="gate" id="adminDenied" style="display:none">
+        <span class="gate-icon">⛔</span>
+        <h3>Access Denied</h3>
+        <p>The connected wallet is not the contract owner. Switch to the NUC Admin wallet in MetaMask and reconnect.</p>
+        <button class="btn btn-ghost" onclick="connectWallet()">Switch Wallet</button>
+      </div>
+      <div id="adminContent" style="display:none">
+        <div class="s-eye">NUC Regulatory Authority</div>
+        <div class="s-title">Institution Registration Queue</div>
+        <div class="s-sub">Review and approve or reject institution registration requests. Only approved institutions
+          can issue blockchain certificates.</div>
+        <div class="steps-bar">
+          <div class="step"><span class="step-num">1</span><span class="step-text">Institution submits request via
+              Institution Portal</span></div>
+          <span class="step-arrow">→</span>
+          <div class="step"><span class="step-num">2</span><span class="step-text">Review institution details
+              below</span></div>
+          <span class="step-arrow">→</span>
+          <div class="step"><span class="step-num">3</span><span class="step-text">Approve or Reject — decision recorded
+              on blockchain</span></div>
         </div>
-        <button class="btn btn-danger" id="revokeBtn" onclick="doRevoke()">Revoke Certificate</button>
-        <div class="tx-st" id="revokeSt"></div>
+        <div class="card card-accent">
+          <div class="card-hdr">
+            <div>
+              <h2>Pending Applications</h2>
+              <p>Institutions awaiting approval</p>
+            </div><button class="btn btn-ghost btn-sm" onclick="loadPending()">↻ Refresh</button>
+          </div>
+          <div class="card-body">
+            <div id="pendingList">
+              <div class="empty"><span class="ei">📋</span>
+                <p>Click Refresh to load pending applications from blockchain</p>
+              </div>
+            </div>
+            <div class="tx-st" id="adminSt"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <div>
+              <h2>Look Up an Institution</h2>
+              <p>Enter any wallet address to check its registration status</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="field"><label>Wallet Address</label><input type="text" id="lookupAddr"
+                style="font-family:'JetBrains Mono',monospace;font-size:.82rem" placeholder="0x..." /></div>
+            <button class="btn btn-primary" style="margin-top:12px" onclick="doLookup()">Look Up</button>
+            <div id="lookupResult" style="margin-top:16px"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card" id="histCard" style="display:none">
-      <div class="card-hdr"><div><h2>Issued Certificate History</h2><p>All certificates issued by your institution — queried live from blockchain events</p></div><button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Refresh</button></div>
-      <div class="card-body" style="padding:0;overflow-x:auto"><div id="histContent" style="padding:20px"><div class="empty"><span class="ei">📋</span><p>Click Refresh to load your certificate history</p></div></div></div>
-    </div>
-  </div>
-</div>
+  </main>
 
-<!-- ADMIN TAB -->
-<div class="tab-pane" id="pane-admin">
-  <div class="gate" id="adminGate">
-    <span class="gate-icon">🏛️</span>
-    <h3>NUC Regulatory Admin</h3>
-    <p>Connect the wallet that deployed the InstitutionRegistry contract. This portal allows the regulatory authority to approve or reject institution applications.</p>
-    <button class="btn btn-green" onclick="connectWallet()">Connect Admin Wallet</button>
-  </div>
-  <div class="gate" id="adminDenied" style="display:none">
-    <span class="gate-icon">⛔</span>
-    <h3>Access Denied</h3>
-    <p>The connected wallet is not the contract owner. Switch to the NUC Admin wallet in MetaMask and reconnect.</p>
-    <button class="btn btn-ghost" onclick="connectWallet()">Switch Wallet</button>
-  </div>
-  <div id="adminContent" style="display:none">
-    <div class="s-eye">NUC Regulatory Authority</div>
-    <div class="s-title">Institution Registration Queue</div>
-    <div class="s-sub">Review and approve or reject institution registration requests. Only approved institutions can issue blockchain certificates.</div>
-    <div class="steps-bar">
-      <div class="step"><span class="step-num">1</span><span class="step-text">Institution submits request via Institution Portal</span></div>
-      <span class="step-arrow">→</span>
-      <div class="step"><span class="step-num">2</span><span class="step-text">Review institution details below</span></div>
-      <span class="step-arrow">→</span>
-      <div class="step"><span class="step-num">3</span><span class="step-text">Approve or Reject — decision recorded on blockchain</span></div>
-    </div>
-    <div class="card card-accent">
-      <div class="card-hdr"><div><h2>Pending Applications</h2><p>Institutions awaiting approval</p></div><button class="btn btn-ghost btn-sm" onclick="loadPending()">↻ Refresh</button></div>
-      <div class="card-body"><div id="pendingList"><div class="empty"><span class="ei">📋</span><p>Click Refresh to load pending applications from blockchain</p></div></div><div class="tx-st" id="adminSt"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-hdr"><div><h2>Look Up an Institution</h2><p>Enter any wallet address to check its registration status</p></div></div>
-      <div class="card-body">
-        <div class="field"><label>Wallet Address</label><input type="text" id="lookupAddr" style="font-family:'JetBrains Mono',monospace;font-size:.82rem" placeholder="0x..."/></div>
-        <button class="btn btn-primary" style="margin-top:12px" onclick="doLookup()">Look Up</button>
-        <div id="lookupResult" style="margin-top:16px"></div>
-      </div>
-    </div>
-  </div>
-</div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+  <script>
+    const REGISTRY_ADDR = "0x5416e493590141D710F367afA994F97A58116834";
+    const CERT_ADDR = "0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5";
+    const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/3RE7F8bPJ2MofC94L2tdP";
+    const AMOY_ID = 80002;
+    const PAGE_URL = window.location.href.split("?")[0];
 
-</main>
+    const REG_ABI = [{ "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_name", "type": "string" }, { "internalType": "string", "name": "_acronym", "type": "string" }, { "internalType": "string", "name": "_website", "type": "string" }], "name": "requestRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "approveRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "rejectRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "isRegistered", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }, { "internalType": "uint256", "name": "registrationTime", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getPendingInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }], "stateMutability": "view", "type": "function" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "string", "name": "acronym", "type": "string" }], "name": "RegistrationRequested", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "name": "RegistrationApproved", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }], "name": "RegistrationRejected", "type": "event" }];
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-<script>
-const REGISTRY_ADDR="0x5416e493590141D710F367afA994F97A58116834";
-const CERT_ADDR="0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5";
-const RPC_URL="https://polygon-amoy.g.alchemy.com/v2/3RE7F8bPJ2MofC94L2tdP";
-const AMOY_ID=80002;
-const PAGE_URL=window.location.href.split("?")[0];
+    const CERT_ABI = [{ "inputs": [{ "components": [{ "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }], "internalType": "struct CertificateRegistry.CertificateInput", "name": "_input", "type": "tuple" }], "name": "issueCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }, { "internalType": "string", "name": "_reason", "type": "string" }], "name": "revokeCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }], "name": "verifyCertificate", "outputs": [{ "components": [{ "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }, { "internalType": "string", "name": "institutionName", "type": "string" }, { "internalType": "string", "name": "institutionAcronym", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }, { "internalType": "address", "name": "issuer", "type": "address" }, { "internalType": "bool", "name": "isValid", "type": "bool" }, { "internalType": "string", "name": "revokeReason", "type": "string" }, { "internalType": "uint256", "name": "revokedAt", "type": "uint256" }], "internalType": "struct CertificateRegistry.Certificate", "name": "", "type": "tuple" }], "stateMutability": "view", "type": "function" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "indexed": true, "internalType": "address", "name": "issuer", "type": "address" }, { "indexed": false, "internalType": "string", "name": "institutionName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentId", "type": "string" }, { "indexed": false, "internalType": "string", "name": "programme", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "issuedAt", "type": "uint256" }], "name": "CertificateIssued", "type": "event" }];
 
-const REG_ABI=[{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_name","type":"string"},{"internalType":"string","name":"_acronym","type":"string"},{"internalType":"string","name":"_website","type":"string"}],"name":"requestRegistration","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"approveRegistration","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"rejectRegistration","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"isRegistered","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"getInstitution","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"acronym","type":"string"},{"internalType":"string","name":"website","type":"string"},{"internalType":"uint256","name":"registrationTime","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"getPendingInstitution","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"acronym","type":"string"},{"internalType":"string","name":"website","type":"string"}],"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"wallet","type":"address"},{"indexed":false,"internalType":"string","name":"name","type":"string"},{"indexed":false,"internalType":"string","name":"acronym","type":"string"}],"name":"RegistrationRequested","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"wallet","type":"address"},{"indexed":false,"internalType":"string","name":"name","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"RegistrationApproved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"wallet","type":"address"},{"indexed":false,"internalType":"string","name":"name","type":"string"}],"name":"RegistrationRejected","type":"event"}];
+    let provider, signer, userAddress, isOwner = false, isReg = false, instData = null, computedDocHash = null;
 
-const CERT_ABI=[{"inputs":[{"components":[{"internalType":"string","name":"studentName","type":"string"},{"internalType":"string","name":"studentId","type":"string"},{"internalType":"string","name":"programme","type":"string"},{"internalType":"string","name":"degreeClass","type":"string"},{"internalType":"uint256","name":"completionYear","type":"uint256"},{"internalType":"string","name":"email","type":"string"},{"internalType":"bytes32","name":"docHash","type":"bytes32"},{"internalType":"string","name":"ipfsCid","type":"string"}],"internalType":"struct CertificateRegistry.CertificateInput","name":"_input","type":"tuple"}],"name":"issueCertificate","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_metaHash","type":"bytes32"},{"internalType":"string","name":"_reason","type":"string"}],"name":"revokeCertificate","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_metaHash","type":"bytes32"}],"name":"verifyCertificate","outputs":[{"components":[{"internalType":"bytes32","name":"metaHash","type":"bytes32"},{"internalType":"bytes32","name":"docHash","type":"bytes32"},{"internalType":"string","name":"ipfsCid","type":"string"},{"internalType":"string","name":"institutionName","type":"string"},{"internalType":"string","name":"institutionAcronym","type":"string"},{"internalType":"string","name":"programme","type":"string"},{"internalType":"string","name":"degreeClass","type":"string"},{"internalType":"string","name":"studentName","type":"string"},{"internalType":"string","name":"studentId","type":"string"},{"internalType":"string","name":"email","type":"string"},{"internalType":"uint256","name":"completionYear","type":"uint256"},{"internalType":"uint256","name":"issuedAt","type":"uint256"},{"internalType":"address","name":"issuer","type":"address"},{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"string","name":"revokeReason","type":"string"},{"internalType":"uint256","name":"revokedAt","type":"uint256"}],"internalType":"struct CertificateRegistry.Certificate","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"metaHash","type":"bytes32"},{"indexed":true,"internalType":"address","name":"issuer","type":"address"},{"indexed":false,"internalType":"string","name":"institutionName","type":"string"},{"indexed":false,"internalType":"string","name":"studentName","type":"string"},{"indexed":false,"internalType":"string","name":"studentId","type":"string"},{"indexed":false,"internalType":"string","name":"programme","type":"string"},{"indexed":false,"internalType":"uint256","name":"issuedAt","type":"uint256"}],"name":"CertificateIssued","type":"event"}];
+    const short = a => a ? a.slice(0, 6) + "..." + a.slice(-4) : "";
+    const fmtDate = u => { if (!u || Number(u) === 0) return "—"; return new Date(Number(u) * 1000).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" }) };
+    const qrUrl = d => `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d)}&margin=10`;
+    function copyTxt(t) { navigator.clipboard.writeText(t).then(() => { const b = event.target; const o = b.textContent; b.textContent = "Copied!"; setTimeout(() => { b.textContent = o }, 1500) }) }
+    function setSt(id, type, msg) { const el = document.getElementById(id); const ico = type === "pending" ? '<span class="spin">⟳</span>' : type === "success" ? "✓" : "✗"; el.className = "tx-st show tx-" + type; el.innerHTML = ico + " " + msg }
+    function clrSt(id) { const el = document.getElementById(id); el.className = "tx-st"; el.innerHTML = "" }
 
-let provider,signer,userAddress,isOwner=false,isReg=false,instData=null,computedDocHash=null;
+    function switchTab(n) { document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active")); document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active")); document.getElementById("pane-" + n).classList.add("active"); document.getElementById("tab-" + n).classList.add("active") }
 
-const short=a=>a?a.slice(0,6)+"..."+a.slice(-4):"";
-const fmtDate=u=>{if(!u||Number(u)===0)return"—";return new Date(Number(u)*1000).toLocaleDateString("en-NG",{year:"numeric",month:"long",day:"numeric"})};
-const qrUrl=d=>`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d)}&margin=10`;
-function copyTxt(t){navigator.clipboard.writeText(t).then(()=>{const b=event.target;const o=b.textContent;b.textContent="Copied!";setTimeout(()=>{b.textContent=o},1500)})}
-function setSt(id,type,msg){const el=document.getElementById(id);const ico=type==="pending"?'<span class="spin">⟳</span>':type==="success"?"✓":"✗";el.className="tx-st show tx-"+type;el.innerHTML=ico+" "+msg}
-function clrSt(id){const el=document.getElementById(id);el.className="tx-st";el.innerHTML=""}
+    // Auto-detect MetaMask account or network changes
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", async (accounts) => {
+        if (accounts.length === 0) {
+          // Wallet disconnected
+          document.getElementById("walletPill").classList.remove("show");
+          document.getElementById("connectBtn").textContent = "Connect Wallet";
+          document.getElementById("connectBtn").disabled = false;
+        } else {
+          // Account switched — reconnect automatically
+          document.getElementById("connectBtn").textContent = "Reconnecting...";
+          await connectWallet();
+        }
+      });
+      window.ethereum.on("chainChanged", () => { window.location.reload(); });
+    }
 
-function switchTab(n){document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));document.getElementById("pane-"+n).classList.add("active");document.getElementById("tab-"+n).classList.add("active")}
+    window.addEventListener("load", () => { const p = new URLSearchParams(window.location.search); const h = p.get("hash"); if (h) { document.getElementById("verifyHash").value = h; runVerify() } });
 
-// Auto-detect MetaMask account or network changes
-if(window.ethereum){
-  window.ethereum.on("accountsChanged", async(accounts)=>{
-    if(accounts.length===0){
-      // Wallet disconnected
+    async function connectWallet() {
+      if (!window.ethereum) { alert("MetaMask is not installed. Install from metamask.io"); return }
+      const btn = document.getElementById("connectBtn"); btn.textContent = "Connecting..."; btn.disabled = true;
+      try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        // Always prompt user to select which account to connect
+        await provider.send("wallet_requestPermissions", [{ "eth_accounts": {} }]);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner(); userAddress = await signer.getAddress();
+        const net = await provider.getNetwork();
+        const nb = document.getElementById("netBadge"); nb.classList.add("show");
+        if (Number(net.chainId) === AMOY_ID) { nb.className = "net-badge show ok"; nb.textContent = "Polygon Amoy ✓" }
+        else { nb.className = "net-badge show wrong"; nb.textContent = "Wrong network — switch to Polygon Amoy" }
+        document.getElementById("walletAddr").textContent = short(userAddress);
+        document.getElementById("disconnectBtn").style.display = "block";
+        document.getElementById("walletPill").classList.add("show");
+        btn.textContent = "Connected";
+        await detectRole();
+      } catch (e) { btn.textContent = "Connect Wallet"; btn.disabled = false; console.error(e) }
+    }
+
+    function disconnectWallet() {
+      // Reset all state
+      provider = null; signer = null; userAddress = null; isOwner = false; isReg = false; instData = null;
+      // Reset UI
       document.getElementById("walletPill").classList.remove("show");
-      document.getElementById("connectBtn").textContent="Connect Wallet";
-      document.getElementById("connectBtn").disabled=false;
-    } else {
-      // Account switched — reconnect automatically
-      document.getElementById("connectBtn").textContent="Reconnecting...";
-      await connectWallet();
+      document.getElementById("connectBtn").textContent = "Connect Wallet";
+      document.getElementById("connectBtn").disabled = false;
+      document.getElementById("connectBtn").style.display = "block";
+      document.getElementById("disconnectBtn").style.display = "none";
+      document.getElementById("netBadge").classList.remove("show");
+      document.getElementById("roleBanner") && (document.getElementById("roleBanner").style && (document.getElementById("roleBanner").style.display = "none"));
+      // Reset all portals to gate state
+      document.getElementById("instGate").style.display = "block";
+      document.getElementById("instContent").style.display = "none";
+      document.getElementById("adminGate").style.display = "block";
+      document.getElementById("adminContent").style.display = "none";
+      document.getElementById("adminDenied").style.display = "none";
     }
-  });
-  window.ethereum.on("chainChanged",()=>{ window.location.reload(); });
-}
 
-window.addEventListener("load",()=>{const p=new URLSearchParams(window.location.search);const h=p.get("hash");if(h){document.getElementById("verifyHash").value=h;runVerify()}});
-
-async function connectWallet(){
-  if(!window.ethereum){alert("MetaMask is not installed. Install from metamask.io");return}
-  const btn=document.getElementById("connectBtn");btn.textContent="Connecting...";btn.disabled=true;
-  try{
-    provider=new ethers.BrowserProvider(window.ethereum);
-    // Always prompt user to select which account to connect
-    await provider.send("wallet_requestPermissions",[{"eth_accounts":{}}]);
-    await provider.send("eth_requestAccounts",[]);
-    signer=await provider.getSigner();userAddress=await signer.getAddress();
-    const net=await provider.getNetwork();
-    const nb=document.getElementById("netBadge");nb.classList.add("show");
-    if(Number(net.chainId)===AMOY_ID){nb.className="net-badge show ok";nb.textContent="Polygon Amoy ✓"}
-    else{nb.className="net-badge show wrong";nb.textContent="Wrong network — switch to Polygon Amoy"}
-    document.getElementById("walletAddr").textContent=short(userAddress);
-    document.getElementById("disconnectBtn").style.display="block";
-    document.getElementById("walletPill").classList.add("show");
-    btn.textContent="Connected";
-    await detectRole();
-  }catch(e){btn.textContent="Connect Wallet";btn.disabled=false;console.error(e)}
-}
-
-function disconnectWallet(){
-  // Reset all state
-  provider=null;signer=null;userAddress=null;isOwner=false;isReg=false;instData=null;
-  // Reset UI
-  document.getElementById("walletPill").classList.remove("show");
-  document.getElementById("connectBtn").textContent="Connect Wallet";
-  document.getElementById("connectBtn").disabled=false;
-  document.getElementById("connectBtn").style.display="block";
-  document.getElementById("disconnectBtn").style.display="none";
-  document.getElementById("netBadge").classList.remove("show");
-  document.getElementById("roleBanner") && (document.getElementById("roleBanner").style && (document.getElementById("roleBanner").style.display="none"));
-  // Reset all portals to gate state
-  document.getElementById("instGate").style.display="block";
-  document.getElementById("instContent").style.display="none";
-  document.getElementById("adminGate").style.display="block";
-  document.getElementById("adminContent").style.display="none";
-  document.getElementById("adminDenied").style.display="none";
-}
-
-async function detectRole(){
-  try{
-    const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,provider);
-    const owner=await reg.owner();
-    isOwner=owner.toLowerCase()===userAddress.toLowerCase();
-    isReg=await reg.isRegistered(userAddress);
-    if(isReg)instData=await reg.getInstitution(userAddress);
-    const rEl=document.getElementById("walletRole");
-    if(isOwner){
-      rEl.textContent="NUC Admin";
-      showAdmin();
-      // Also initialise institution tab so switching tabs works
-      document.getElementById("instGate").style.display="none";
-      document.getElementById("instContent").style.display="block";
-      document.getElementById("instTitle").textContent="Institution Portal";
-      document.getElementById("instSub").textContent="This wallet is the NUC Admin. Switch to an institution wallet to register or issue certificates.";
-      document.getElementById("instSteps").style.display="none";
-      document.getElementById("instStatBadge").className="badge b-gray";
-      document.getElementById("instStatBadge").textContent="Admin Wallet";
-      document.getElementById("instStatDesc").textContent="NUC Admin wallets do not issue certificates";
-      document.getElementById("instStatBody").innerHTML="<p style='font-size:.875rem;color:var(--n500)'>To issue certificates, connect a registered institution wallet. This wallet is configured as the NUC regulatory admin.</p>";
-      document.getElementById("regCard").style.display="none";
-      document.getElementById("issueCard").style.display="none";
-      document.getElementById("revokeCard").style.display="none";
-      document.getElementById("histCard").style.display="none";
+    async function detectRole() {
+      try {
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
+        const owner = await reg.owner();
+        isOwner = owner.toLowerCase() === userAddress.toLowerCase();
+        isReg = await reg.isRegistered(userAddress);
+        if (isReg) instData = await reg.getInstitution(userAddress);
+        const rEl = document.getElementById("walletRole");
+        if (isOwner) {
+          rEl.textContent = "NUC Admin";
+          showAdmin();
+          // Also initialise institution tab so switching tabs works
+          document.getElementById("instGate").style.display = "none";
+          document.getElementById("instContent").style.display = "block";
+          document.getElementById("instTitle").textContent = "Institution Portal";
+          document.getElementById("instSub").textContent = "This wallet is the NUC Admin. Switch to an institution wallet to register or issue certificates.";
+          document.getElementById("instSteps").style.display = "none";
+          document.getElementById("instStatBadge").className = "badge b-gray";
+          document.getElementById("instStatBadge").textContent = "Admin Wallet";
+          document.getElementById("instStatDesc").textContent = "NUC Admin wallets do not issue certificates";
+          document.getElementById("instStatBody").innerHTML = "<p style='font-size:.875rem;color:var(--n500)'>To issue certificates, connect a registered institution wallet. This wallet is configured as the NUC regulatory admin.</p>";
+          document.getElementById("regCard").style.display = "none";
+          document.getElementById("issueCard").style.display = "none";
+          document.getElementById("revokeCard").style.display = "none";
+          document.getElementById("histCard").style.display = "none";
+        }
+        else if (isReg) { rEl.textContent = instData[1]; showInstitution() }
+        else { let pend = false; try { await reg.getPendingInstitution(userAddress); pend = true } catch { } rEl.textContent = pend ? "Pending" : "Unregistered"; showInstitution(pend) }
+      } catch (e) { console.error("Role detection:", e) }
     }
-    else if(isReg){rEl.textContent=instData[1];showInstitution()}
-    else{let pend=false;try{await reg.getPendingInstitution(userAddress);pend=true}catch{}rEl.textContent=pend?"Pending":"Unregistered";showInstitution(pend)}
-  }catch(e){console.error("Role detection:",e)}
-}
 
-function showAdmin(){document.getElementById("adminGate").style.display="none";document.getElementById("adminDenied").style.display="none";document.getElementById("adminContent").style.display="block";loadPending()}
+    function showAdmin() { document.getElementById("adminGate").style.display = "none"; document.getElementById("adminDenied").style.display = "none"; document.getElementById("adminContent").style.display = "block"; loadPending() }
 
-function showInstitution(isPend=false){
-  document.getElementById("instGate").style.display="none";document.getElementById("instContent").style.display="block";
-  document.getElementById("adminGate").style.display="none";document.getElementById("adminDenied").style.display="block";
-  const t=document.getElementById("instTitle"),s=document.getElementById("instSub"),badge=document.getElementById("instStatBadge"),desc=document.getElementById("instStatDesc"),body=document.getElementById("instStatBody"),steps=document.getElementById("instSteps"),regC=document.getElementById("regCard"),issC=document.getElementById("issueCard"),revC=document.getElementById("revokeCard"),histC=document.getElementById("histCard");
-  if(isReg&&instData){
-    t.textContent=instData[0];s.textContent="Registered institution — issue and manage certificates";
-    badge.className="badge b-green";badge.textContent="✓ Approved by NUC";desc.textContent="Your institution is approved and active";
-    body.innerHTML=`<p style="font-size:.875rem;color:var(--n700)"><strong>${instData[0]}</strong> (${instData[1]}) · ${instData[2]}<br/><span style="color:var(--n500)">Registered on ${fmtDate(instData[3])}</span></p>`;
-    steps.innerHTML=`<div class="step"><span class="step-num">1</span><span class="step-text">Fill in graduate details</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">2</span><span class="step-text">Upload PDF to compute SHA-256 fingerprint</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">3</span><span class="step-text">Issue on blockchain — receive hash + QR code</span></div>`;
-    regC.style.display="none";issC.style.display="block";revC.style.display="block";histC.style.display="block";
-  }else if(isPend){
-    t.textContent="Registration Pending";s.textContent="Your request awaits NUC review";
-    badge.className="badge b-amber";badge.textContent="⏳ Pending";desc.textContent="Awaiting NUC approval";
-    body.innerHTML=`<p style="font-size:.875rem;color:var(--n500)">Your registration has been submitted. You will be able to issue certificates once the NUC admin approves your request.</p>`;
-    steps.style.display="none";regC.style.display="none";issC.style.display="none";revC.style.display="none";histC.style.display="none";
-  }else{
-    t.textContent="Register Your Institution";s.textContent="Submit a registration request to the NUC. Once approved, you can issue blockchain certificates.";
-    badge.className="badge b-gray";badge.textContent="Not Registered";desc.textContent="Submit a registration request below";
-    body.innerHTML=`<p style="font-size:.875rem;color:var(--n500)">Complete the form below and submit your registration to NUC for approval.</p>`;
-    steps.innerHTML=`<div class="step"><span class="step-num">1</span><span class="step-text">Fill in your institution details</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">2</span><span class="step-text">Submit request to NUC Admin</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">3</span><span class="step-text">Once approved — issue certificates</span></div>`;
-    regC.style.display="block";issC.style.display="none";revC.style.display="none";histC.style.display="none";
-  }
-}
-
-async function doRegister(){
-  const name=document.getElementById("regName").value.trim(),acr=document.getElementById("regAcronym").value.trim(),web=document.getElementById("regWebsite").value.trim();
-  if(!name||!acr){setSt("regSt","error","Institution name and acronym are required.");return}
-  const btn=document.getElementById("regBtn");btn.disabled=true;setSt("regSt","pending","Submitting registration to blockchain...");
-  try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.requestRegistration(name,acr,web);setSt("regSt","pending","Transaction submitted — awaiting confirmation...");await tx.wait();setSt("regSt","success","Registration submitted successfully. Share your wallet address with the NUC Admin: "+userAddress);await detectRole()}
-  catch(e){setSt("regSt","error",e.reason||e.message);btn.disabled=false}
-}
-
-async function onPdf(input){
-  const file=input.files[0];if(!file)return;
-  computedDocHash=null;document.getElementById("docHashDiv").style.display="none";
-  try{const buf=await file.arrayBuffer();const hb=await crypto.subtle.digest("SHA-256",buf);const arr=Array.from(new Uint8Array(hb));computedDocHash="0x"+arr.map(b=>b.toString(16).padStart(2,"0")).join("");document.getElementById("docHashVal").textContent=computedDocHash;document.getElementById("docHashDiv").style.display="block"}
-  catch(e){console.error(e)}
-}
-
-async function doIssue(){
-  const name=document.getElementById("stuName").value.trim(),id=document.getElementById("stuId").value.trim(),prog=document.getElementById("stuProg").value.trim(),cls=document.getElementById("stuClass").value,yr=parseInt(document.getElementById("stuYear").value),em=document.getElementById("stuEmail").value.trim(),ipfs=document.getElementById("stuIpfs").value.trim();
-  if(!name||!id||!prog||!cls||!yr){setSt("issueSt","error","Please fill in all required fields.");return}
-  const dHash=computedDocHash||ethers.zeroPadValue("0x01",32);
-  const btn=document.getElementById("issueBtn");btn.disabled=true;document.getElementById("issueResult").style.display="none";setSt("issueSt","pending","Issuing certificate on Polygon Amoy blockchain...");
-  try{
-    const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,signer);const tx=await cert.issueCertificate([name,id,prog,cls,BigInt(yr),em,dHash,ipfs||""]);setSt("issueSt","pending","Transaction submitted — awaiting confirmation...");const receipt=await tx.wait();
-    let mHash="";for(const log of receipt.logs){try{const p=cert.interface.parseLog(log);if(p&&p.name==="CertificateIssued"){mHash=p.args.metaHash;break}}catch{}}
-    setSt("issueSt","success","Certificate issued and permanently stored on the blockchain.");
-    document.getElementById("issuedHash").textContent=mHash;
-    if(mHash){const link=PAGE_URL+"?hash="+mHash;document.getElementById("issueQRImg").src=qrUrl(link);document.getElementById("issueQR").style.display="flex"}
-    document.getElementById("issueResult").style.display="block";btn.disabled=false;
-  }catch(e){setSt("issueSt","error",e.reason||e.message);btn.disabled=false}
-}
-
-async function doRevoke(){
-  const h=document.getElementById("revokeHash").value.trim(),r=document.getElementById("revokeReason").value.trim();
-  if(!h||!r){setSt("revokeSt","error","Both fields are required.");return}
-  if(!confirm("Revocation is permanent. Proceed?"))return;
-  const btn=document.getElementById("revokeBtn");btn.disabled=true;setSt("revokeSt","pending","Submitting revocation...");
-  try{const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,signer);const tx=await cert.revokeCertificate(h,r);setSt("revokeSt","pending","Awaiting confirmation...");await tx.wait();setSt("revokeSt","success","Certificate revoked. Reason and timestamp stored permanently on-chain.");btn.disabled=false}
-  catch(e){setSt("revokeSt","error",e.reason||e.message);btn.disabled=false}
-}
-
-async function loadHistory(){
-  const el=document.getElementById("histContent");el.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
-  try{
-    const rp=new ethers.JsonRpcProvider(RPC_URL);const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,rp);const currentBlock=await rp.getBlockNumber();const startBlock=Math.max(0,currentBlock-500);const filter=cert.filters.CertificateIssued(null,userAddress);const events=await cert.queryFilter(filter,startBlock,"latest");
-    if(!events.length){el.innerHTML=`<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`;return}
-    const rows=events.map((ev,i)=>`<tr><td>${events.length-i}</td><td><strong>${ev.args.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${ev.args.studentId}</span></td><td>${ev.args.programme}</td><td>${fmtDate(ev.args.issuedAt)}</td><td><span class="mono-sm">${ev.args.metaHash.slice(0,14)}...</span><br/><button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${ev.args.metaHash}')">Copy hash</button></td></tr>`).join("");
-    el.innerHTML=`<table class="hist-tbl"><thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead><tbody>${rows}</tbody></table>`;
-  }catch(e){el.innerHTML=`<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`}
-}
-
-async function loadPending(){
-  const list=document.getElementById("pendingList");
-  list.innerHTML=`<div class="empty"><span class="ei spin">⟳</span><p>Checking for recent applications...</p></div>`;
-  try{
-    const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,provider);
-    const curBlk=await provider.getBlockNumber();
-    // Query only last 10 blocks — catches very recent registrations
-    const fromBlk=Math.max(0,curBlk-10);
-    const reqEv=await reg.queryFilter(reg.filters.RegistrationRequested(),fromBlk,"latest");
-    const appEv=await reg.queryFilter(reg.filters.RegistrationApproved(),fromBlk,"latest");
-    const rejEv=await reg.queryFilter(reg.filters.RegistrationRejected(),fromBlk,"latest");
-    const app=new Set(appEv.map(e=>e.args.wallet.toLowerCase()));
-    const rej=new Set(rejEv.map(e=>e.args.wallet.toLowerCase()));
-    const pending=reqEv.filter(e=>!app.has(e.args.wallet.toLowerCase())&&!rej.has(e.args.wallet.toLowerCase()));
-    if(pending.length>0){
-      list.innerHTML="";
-      for(const ev of pending){
-        const addr=ev.args.wallet,name=ev.args.name,acr=ev.args.acronym;
-        let web="";try{const d=await reg.getPendingInstitution(addr);web=d[2]}catch{}
-        const item=document.createElement("div");item.className="pend-row";
-        item.innerHTML=`<div class="pend-info"><h3>${name} <span style="font-weight:400;color:var(--n500)">(${acr})</span></h3>${web?`<p>${web}</p>`:""}<div class="pend-addr">${addr}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${addr}','${name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${addr}','${name}')">✗ Reject</button></div>`;
-        list.appendChild(item);
+    function showInstitution(isPend = false) {
+      document.getElementById("instGate").style.display = "none"; document.getElementById("instContent").style.display = "block";
+      document.getElementById("adminGate").style.display = "none"; document.getElementById("adminDenied").style.display = "block";
+      const t = document.getElementById("instTitle"), s = document.getElementById("instSub"), badge = document.getElementById("instStatBadge"), desc = document.getElementById("instStatDesc"), body = document.getElementById("instStatBody"), steps = document.getElementById("instSteps"), regC = document.getElementById("regCard"), issC = document.getElementById("issueCard"), revC = document.getElementById("revokeCard"), histC = document.getElementById("histCard");
+      if (isReg && instData) {
+        t.textContent = instData[0]; s.textContent = "Registered institution — issue and manage certificates";
+        badge.className = "badge b-green"; badge.textContent = "✓ Approved by NUC"; desc.textContent = "Your institution is approved and active";
+        body.innerHTML = `<p style="font-size:.875rem;color:var(--n700)"><strong>${instData[0]}</strong> (${instData[1]}) · ${instData[2]}<br/><span style="color:var(--n500)">Registered on ${fmtDate(instData[3])}</span></p>`;
+        steps.innerHTML = `<div class="step"><span class="step-num">1</span><span class="step-text">Fill in graduate details</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">2</span><span class="step-text">Upload PDF to compute SHA-256 fingerprint</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">3</span><span class="step-text">Issue on blockchain — receive hash + QR code</span></div>`;
+        regC.style.display = "none"; issC.style.display = "block"; revC.style.display = "block"; histC.style.display = "block";
+      } else if (isPend) {
+        t.textContent = "Registration Pending"; s.textContent = "Your request awaits NUC review";
+        badge.className = "badge b-amber"; badge.textContent = "⏳ Pending"; desc.textContent = "Awaiting NUC approval";
+        body.innerHTML = `<p style="font-size:.875rem;color:var(--n500)">Your registration has been submitted. You will be able to issue certificates once the NUC admin approves your request.</p>`;
+        steps.style.display = "none"; regC.style.display = "none"; issC.style.display = "none"; revC.style.display = "none"; histC.style.display = "none";
+      } else {
+        t.textContent = "Register Your Institution"; s.textContent = "Submit a registration request to the NUC. Once approved, you can issue blockchain certificates.";
+        badge.className = "badge b-gray"; badge.textContent = "Not Registered"; desc.textContent = "Submit a registration request below";
+        body.innerHTML = `<p style="font-size:.875rem;color:var(--n500)">Complete the form below and submit your registration to NUC for approval.</p>`;
+        steps.innerHTML = `<div class="step"><span class="step-num">1</span><span class="step-text">Fill in your institution details</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">2</span><span class="step-text">Submit request to NUC Admin</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">3</span><span class="step-text">Once approved — issue certificates</span></div>`;
+        regC.style.display = "block"; issC.style.display = "none"; revC.style.display = "none"; histC.style.display = "none";
       }
-    } else {
-      // No recent events — show lookup instruction
-      list.innerHTML=`<div class="empty"><span class="ei">ℹ️</span>
-        <p style="color:var(--n700);font-size:.85rem;line-height:1.6">
-          No applications in the last 10 blocks.<br/>
-          If an institution just registered, use the <strong>Look Up an Institution</strong> tool below — paste their wallet address to view status and approve or reject.
-        </p></div>`;
     }
-  }catch(e){
-    list.innerHTML=`<div class="empty"><span class="ei">ℹ️</span>
-      <p style="color:var(--n700);font-size:.85rem;line-height:1.6">
-        Use the <strong>Look Up an Institution</strong> tool below.<br/>
-        Enter the institution wallet address to view its status and approve or reject.
-      </p></div>`;
-  }
-}
 
-async function doApprove(addr,name){setSt("adminSt","pending",`Approving ${name}...`);try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.approveRegistration(addr);setSt("adminSt","pending","Awaiting confirmation...");await tx.wait();setSt("adminSt","success",`${name} approved — can now issue certificates.`);await loadPending()}catch(e){setSt("adminSt","error",e.reason||e.message)}}
-async function doReject(addr,name){if(!confirm(`Reject ${name}?`))return;setSt("adminSt","pending",`Rejecting ${name}...`);try{const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,signer);const tx=await reg.rejectRegistration(addr);await tx.wait();setSt("adminSt","success",`${name} rejected.`);await loadPending()}catch(e){setSt("adminSt","error",e.reason||e.message)}}
+    async function doRegister() {
+      const name = document.getElementById("regName").value.trim(), acr = document.getElementById("regAcronym").value.trim(), web = document.getElementById("regWebsite").value.trim();
+      if (!name || !acr) { setSt("regSt", "error", "Institution name and acronym are required."); return }
+      const btn = document.getElementById("regBtn"); btn.disabled = true; setSt("regSt", "pending", "Submitting registration to blockchain...");
+      try {
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer); const tx = await reg.requestRegistration(name, acr, web, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("regSt", "pending", "Transaction submitted — awaiting confirmation..."); await tx.wait();// Store in localStorage so NUC Admin can see it automatically
+        const lsPending = JSON.parse(localStorage.getItem('cv_pending') || '[]');
+        lsPending.push({ wallet: userAddress, name: name, acronym: acr, website: web, ts: Date.now() });
+        localStorage.setItem('cv_pending', JSON.stringify(lsPending));
+        setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress); await detectRole()
+      }
+      catch (e) { setSt("regSt", "error", e.reason || e.message); btn.disabled = false }
+    }
 
-async function doLookup(){
-  const addr=document.getElementById("lookupAddr").value.trim(),out=document.getElementById("lookupResult");if(!addr)return;
-  out.innerHTML=`<p style="font-size:.82rem;color:var(--n400)">Looking up...</p>`;
-  try{
-    const reg=new ethers.Contract(REGISTRY_ADDR,REG_ABI,provider);const ok=await reg.isRegistered(addr);
-    if(ok){const d=await reg.getInstitution(addr);out.innerHTML=`<div style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:16px"><span class="badge b-green">✓ Registered</span><p style="margin-top:10px;font-weight:700">${d[0]} (${d[1]})</p><p style="color:var(--n500);font-size:.82rem">${d[2]}</p><p style="color:var(--n500);font-size:.78rem;margin-top:4px">Registered ${fmtDate(d[3])}</p></div>`}
-    else{let pend=false;try{await reg.getPendingInstitution(addr);pend=true}catch{}out.innerHTML=pend?`<div style="background:var(--gold-bg);border:1px solid #EDD9A3;border-radius:8px;padding:14px"><span class="badge b-amber">⏳ Pending Approval</span></div>`:`<div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:14px"><span class="badge b-red">Not Registered</span></div>`}
-  }catch(e){out.innerHTML=`<p style="font-size:.82rem;color:var(--revoked)">Error: ${e.message}</p>`}
-}
+    async function onPdf(input) {
+      const file = input.files[0]; if (!file) return;
+      computedDocHash = null; document.getElementById("docHashDiv").style.display = "none";
+      try { const buf = await file.arrayBuffer(); const hb = await crypto.subtle.digest("SHA-256", buf); const arr = Array.from(new Uint8Array(hb)); computedDocHash = "0x" + arr.map(b => b.toString(16).padStart(2, "0")).join(""); document.getElementById("docHashVal").textContent = computedDocHash; document.getElementById("docHashDiv").style.display = "block" }
+      catch (e) { console.error(e) }
+    }
 
-async function runVerify(){
-  const hash=document.getElementById("verifyHash").value.trim();
-  document.getElementById("certCard").style.display="none";
-  if(!hash.startsWith("0x")||hash.length!==66){setSt("verifySt","error","Enter a valid certificate hash — starts with 0x, exactly 66 characters.");return}
-  const btn=document.getElementById("verifyBtn");btn.disabled=true;setSt("verifySt","pending","Querying Polygon Amoy blockchain...");
-  try{
-    const rp=new ethers.JsonRpcProvider(RPC_URL);const cert=new ethers.Contract(CERT_ADDR,CERT_ABI,rp);const c=await cert.verifyCertificate(hash);clrSt("verifySt");showResult(c,hash);
-  }catch(e){let msg=e.message||"Unknown error";if(msg.includes("Certificate not found"))msg="No certificate found for this hash. Please check and try again.";setSt("verifySt","error",msg)}
-  finally{btn.disabled=false}
-}
+    async function doIssue() {
+      const name = document.getElementById("stuName").value.trim(), id = document.getElementById("stuId").value.trim(), prog = document.getElementById("stuProg").value.trim(), cls = document.getElementById("stuClass").value, yr = parseInt(document.getElementById("stuYear").value), em = document.getElementById("stuEmail").value.trim(), ipfs = document.getElementById("stuIpfs").value.trim();
+      if (!name || !id || !prog || !cls || !yr) { setSt("issueSt", "error", "Please fill in all required fields."); return }
+      const dHash = computedDocHash || ethers.zeroPadValue("0x01", 32);
+      const btn = document.getElementById("issueBtn"); btn.disabled = true; document.getElementById("issueResult").style.display = "none"; setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
+      try {
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); const receipt = await tx.wait();
+        let mHash = ""; for (const log of receipt.logs) { try { const p = cert.interface.parseLog(log); if (p && p.name === "CertificateIssued") { mHash = p.args.metaHash; break } } catch { } }
+        setSt("issueSt", "success", "Certificate issued and permanently stored on the blockchain.");
+        document.getElementById("issuedHash").textContent = mHash;
+        if (mHash) { const link = PAGE_URL + "?hash=" + mHash; document.getElementById("issueQRImg").src = qrUrl(link); document.getElementById("issueQR").style.display = "flex" }
+        document.getElementById("issueResult").style.display = "block"; btn.disabled = false;
+      } catch (e) { setSt("issueSt", "error", e.reason || e.message); btn.disabled = false }
+    }
 
-function clearResult(){document.getElementById("verifyHash").value="";document.getElementById("certCard").style.display="none";clrSt("verifySt")}
+    async function doRevoke() {
+      const h = document.getElementById("revokeHash").value.trim(), r = document.getElementById("revokeReason").value.trim();
+      if (!h || !r) { setSt("revokeSt", "error", "Both fields are required."); return }
+      if (!confirm("Revocation is permanent. Proceed?")) return;
+      const btn = document.getElementById("revokeBtn"); btn.disabled = true; setSt("revokeSt", "pending", "Submitting revocation...");
+      try { const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.revokeCertificate(h, r, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("revokeSt", "pending", "Awaiting confirmation..."); await tx.wait(); setSt("revokeSt", "success", "Certificate revoked. Reason and timestamp stored permanently on-chain."); btn.disabled = false }
+      catch (e) { setSt("revokeSt", "error", e.reason || e.message); btn.disabled = false }
+    }
 
-function showResult(c,hash){
-  const valid=c.isValid;
-  document.getElementById("certHero").innerHTML=`<span class="shield-icon ${valid?"shield-valid":"shield-revoked"}">${valid?"🛡️":"🚫"}</span><div class="result-title ${valid?"valid":"revoked"}">${valid?"CERTIFICATE VALID":"CERTIFICATE REVOKED"}</div><div class="result-sub">${valid?"This certificate has been verified as authentic on the Polygon Amoy blockchain.":"This certificate has been revoked by the issuing institution."}</div>`;
-  document.getElementById("certFields").innerHTML=`
+    async function loadHistory() {
+      const el = document.getElementById("histContent"); el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
+      try {
+        const rp = new ethers.JsonRpcProvider(RPC_URL); const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp); const currentBlock = await rp.getBlockNumber(); const startBlock = Math.max(0, currentBlock - 500); const filter = cert.filters.CertificateIssued(null, userAddress); const events = await cert.queryFilter(filter, startBlock, "latest");
+        if (!events.length) { el.innerHTML = `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`; return }
+        const rows = events.map((ev, i) => `<tr><td>${events.length - i}</td><td><strong>${ev.args.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${ev.args.studentId}</span></td><td>${ev.args.programme}</td><td>${fmtDate(ev.args.issuedAt)}</td><td><span class="mono-sm">${ev.args.metaHash.slice(0, 14)}...</span><br/><button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${ev.args.metaHash}')">Copy hash</button></td></tr>`).join("");
+        el.innerHTML = `<table class="hist-tbl"><thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead><tbody>${rows}</tbody></table>`;
+      } catch (e) { el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>` }
+    }
+
+    async function loadPending() {
+      const list = document.getElementById("pendingList");
+      list.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading pending applications...</p></div>`;
+      try {
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
+        // Read from localStorage (populated when institutions register)
+        const lsPending = JSON.parse(localStorage.getItem('cv_pending') || '[]');
+        // Also try last 10 blocks for very recent registrations
+        let recentAddrs = [];
+        try {
+          const curBlk = await provider.getBlockNumber();
+          const reqEv = await reg.queryFilter(reg.filters.RegistrationRequested(), Math.max(0, curBlk - 10), "latest");
+          recentAddrs = reqEv.map(e => ({ wallet: e.args.wallet, name: e.args.name, acronym: e.args.acronym, website: "" }));
+        } catch { }
+        // Merge both sources, deduplicate by wallet
+        const allMap = {};
+        for (const r of [...lsPending, ...recentAddrs]) allMap[r.wallet.toLowerCase()] = { wallet: r.wallet, name: r.name, acronym: r.acronym, website: r.website || "" };
+        const allPending = Object.values(allMap);
+        if (allPending.length === 0) {
+          list.innerHTML = `<div class="empty"><span class="ei">ℹ️</span>
+        <p style="color:var(--n700);font-size:.85rem;line-height:1.6">No pending applications found.<br/>
+        Use the <strong>Look Up an Institution</strong> tool below if you have a wallet address.</p></div>`;
+          return;
+        }
+        // For each, check on-chain status
+        list.innerHTML = "";
+        let shownAny = false;
+        const approvedWallets = [];
+        for (const item of allPending) {
+          const isReg = await reg.isRegistered(item.wallet);
+          if (isReg) { approvedWallets.push(item.wallet.toLowerCase()); continue; }
+          let stillPending = false; let web = item.website || "";
+          try { const pd = await reg.getPendingInstitution(item.wallet); stillPending = true; web = web || pd[2]; } catch { }
+          if (!stillPending) { approvedWallets.push(item.wallet.toLowerCase()); continue; }
+          shownAny = true;
+          const el = document.createElement("div"); el.className = "pend-row";
+          el.innerHTML = `<div class="pend-info"><h3>${item.name} <span style="font-weight:400;color:var(--n500)">(${item.acronym})</span></h3>${web ? `<p>${web}</p>` : ""}<div class="pend-addr">${item.wallet}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${item.wallet}','${item.name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${item.wallet}','${item.name}')">✗ Reject</button></div>`;
+          list.appendChild(el);
+        }
+        // Clean up approved ones from localStorage
+        if (approvedWallets.length > 0) {
+          const cleaned = lsPending.filter(r => !approvedWallets.includes(r.wallet.toLowerCase()));
+          localStorage.setItem('cv_pending', JSON.stringify(cleaned));
+        }
+        if (!shownAny) {
+          list.innerHTML = `<div class="empty"><span class="ei">✅</span><p>No pending applications at this time.</p></div>`;
+        }
+      } catch (e) {
+        list.innerHTML = `<div class="empty"><span class="ei">ℹ️</span>
+      <p style="color:var(--n700);font-size:.85rem">Use the <strong>Look Up an Institution</strong> tool below.</p></div>`;
+      }
+
+      async function doApprove(addr, name) { setSt("adminSt", "pending", `Approving ${name}...`); try { const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer); const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("adminSt", "pending", "Awaiting confirmation..."); await tx.wait(); setSt("adminSt", "success", `${name} approved — can now issue certificates.`); await loadPending() } catch (e) { setSt("adminSt", "error", e.reason || e.message) } }
+      async function doReject(addr, name) { if (!confirm(`Reject ${name}?`)) return; setSt("adminSt", "pending", `Rejecting ${name}...`); try { const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer); const tx = await reg.rejectRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); await tx.wait(); setSt("adminSt", "success", `${name} rejected.`); await loadPending() } catch (e) { setSt("adminSt", "error", e.reason || e.message) } }
+
+      async function doLookup() {
+        const addr = document.getElementById("lookupAddr").value.trim(), out = document.getElementById("lookupResult"); if (!addr) return;
+        out.innerHTML = `<p style="font-size:.82rem;color:var(--n400)">Looking up...</p>`;
+        try {
+          const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider); const ok = await reg.isRegistered(addr);
+          if (ok) { const d = await reg.getInstitution(addr); out.innerHTML = `<div style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:16px"><span class="badge b-green">✓ Registered</span><p style="margin-top:10px;font-weight:700">${d[0]} (${d[1]})</p><p style="color:var(--n500);font-size:.82rem">${d[2]}</p><p style="color:var(--n500);font-size:.78rem;margin-top:4px">Registered ${fmtDate(d[3])}</p></div>` }
+          else {
+            let pend = false; let pd = { name: "", acronym: "", website: "" };
+            try { const r = await reg.getPendingInstitution(addr); pend = true; pd = { name: r[0], acronym: r[1], website: r[2] } } catch { }
+            if (pend) {
+              out.innerHTML = `<div style="background:var(--gold-bg);border:1px solid #EDD9A3;border-radius:8px;padding:18px">
+          <span class="badge b-amber">⏳ Pending Approval</span>
+          <p style="margin-top:12px;font-weight:700;font-size:.95rem">${pd.name} (${pd.acronym})</p>
+          ${pd.website ? `<p style="color:var(--n500);font-size:.82rem;margin-top:4px">${pd.website}</p>` : ""}
+          <p style="font-family:monospace;font-size:.72rem;color:var(--n400);margin-top:6px;word-break:break-all">${addr}</p>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button class="btn btn-green btn-sm" onclick="doApprove('${addr}','${pd.name}')">✓ Approve</button>
+            <button class="btn btn-danger btn-sm" onclick="doReject('${addr}','${pd.name}')">✗ Reject</button>
+          </div>
+        </div>`;
+            } else {
+              out.innerHTML = `<div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:14px"><span class="badge b-red">Not Registered</span></div>`;
+            }
+          }
+        } catch (e) { out.innerHTML = `<p style="font-size:.82rem;color:var(--revoked)">Error: ${e.message}</p>` }
+      }
+
+      async function runVerify() {
+        const hash = document.getElementById("verifyHash").value.trim();
+        document.getElementById("certCard").style.display = "none";
+        if (!hash.startsWith("0x") || hash.length !== 66) { setSt("verifySt", "error", "Enter a valid certificate hash — starts with 0x, exactly 66 characters."); return }
+        const btn = document.getElementById("verifyBtn"); btn.disabled = true; setSt("verifySt", "pending", "Querying Polygon Amoy blockchain...");
+        try {
+          const rp = new ethers.JsonRpcProvider(RPC_URL); const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp); const c = await cert.verifyCertificate(hash); clrSt("verifySt"); showResult(c, hash);
+        } catch (e) { let msg = e.message || "Unknown error"; if (msg.includes("Certificate not found")) msg = "No certificate found for this hash. Please check and try again."; setSt("verifySt", "error", msg) }
+        finally { btn.disabled = false }
+      }
+
+      function clearResult() { document.getElementById("verifyHash").value = ""; document.getElementById("certCard").style.display = "none"; clrSt("verifySt") }
+
+      function showResult(c, hash) {
+        const valid = c.isValid;
+        document.getElementById("certHero").innerHTML = `<span class="shield-icon ${valid ? "shield-valid" : "shield-revoked"}">${valid ? "🛡️" : "🚫"}</span><div class="result-title ${valid ? "valid" : "revoked"}">${valid ? "CERTIFICATE VALID" : "CERTIFICATE REVOKED"}</div><div class="result-sub">${valid ? "This certificate has been verified as authentic on the Polygon Amoy blockchain." : "This certificate has been revoked by the issuing institution."}</div>`;
+        document.getElementById("certFields").innerHTML = `
     <div class="cf"><div class="cf-lbl">Student Name</div><div class="cf-val">${c.studentName}</div></div>
     <div class="cf"><div class="cf-lbl">Student ID</div><div class="cf-val">${c.studentId}</div></div>
     <div class="cf full"><div class="cf-lbl">Issuing Institution</div><div class="cf-val">${c.institutionName} (${c.institutionAcronym})</div></div>
@@ -653,14 +1618,15 @@ function showResult(c,hash){
     <div class="cf"><div class="cf-lbl">Issuing Wallet</div><div class="cf-val mono">${c.issuer}</div></div>
     <div class="cf full"><div class="cf-lbl">Certificate Hash (metaHash)</div><div class="cf-val mono">${hash}<button class="copy-btn" style="margin-left:12px" onclick="copyTxt('${hash}')">Copy</button></div></div>
     <div class="cf full"><div class="cf-lbl">Document Fingerprint (SHA-256 docHash)</div><div class="cf-val mono">${c.docHash}</div></div>
-    ${c.ipfsCid&&c.ipfsCid!==""&&c.ipfsCid!=="QmTestCidPlaceholder"?`<div class="cf full"><div class="cf-lbl">IPFS Document</div><div class="cf-val"><a href="https://ipfs.io/ipfs/${c.ipfsCid}" target="_blank" rel="noopener" style="color:var(--g600)">${c.ipfsCid}</a></div></div>`:""}
-    ${!valid?`<div class="cf full alert"><div class="cf-lbl">Revocation Reason</div><div class="cf-val">${c.revokeReason}</div><div class="cf-lbl" style="margin-top:10px">Revoked On</div><div class="cf-val">${fmtDate(c.revokedAt)}</div></div>`:""}`;
-  if(valid){const link=PAGE_URL+"?hash="+hash;document.getElementById("qrImg").src=qrUrl(link);document.getElementById("qrSec").style.display="flex"}
-  else{document.getElementById("qrSec").style.display="none"}
-  document.getElementById("resultActs").innerHTML=`<button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button><button class="btn btn-ghost btn-sm" onclick="copyTxt('${hash}')">📋 Copy Hash</button><button class="btn btn-ghost btn-sm" onclick="clearResult()">✕ Clear</button>`;
-  document.getElementById("certCard").style.display="block";
-  document.getElementById("certCard").scrollIntoView({behavior:"smooth"});
-}
-</script>
+    ${c.ipfsCid && c.ipfsCid !== "" && c.ipfsCid !== "QmTestCidPlaceholder" ? `<div class="cf full"><div class="cf-lbl">IPFS Document</div><div class="cf-val"><a href="https://ipfs.io/ipfs/${c.ipfsCid}" target="_blank" rel="noopener" style="color:var(--g600)">${c.ipfsCid}</a></div></div>` : ""}
+    ${!valid ? `<div class="cf full alert"><div class="cf-lbl">Revocation Reason</div><div class="cf-val">${c.revokeReason}</div><div class="cf-lbl" style="margin-top:10px">Revoked On</div><div class="cf-val">${fmtDate(c.revokedAt)}</div></div>` : ""}`;
+        if (valid) { const link = PAGE_URL + "?hash=" + hash; document.getElementById("qrImg").src = qrUrl(link); document.getElementById("qrSec").style.display = "flex" }
+        else { document.getElementById("qrSec").style.display = "none" }
+        document.getElementById("resultActs").innerHTML = `<button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button><button class="btn btn-ghost btn-sm" onclick="copyTxt('${hash}')">📋 Copy Hash</button><button class="btn btn-ghost btn-sm" onclick="clearResult()">✕ Clear</button>`;
+        document.getElementById("certCard").style.display = "block";
+        document.getElementById("certCard").scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  </script>
 </body>
 </html>
