@@ -1325,18 +1325,39 @@
 
     const REG_ABI = [{ "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_name", "type": "string" }, { "internalType": "string", "name": "_acronym", "type": "string" }, { "internalType": "string", "name": "_website", "type": "string" }], "name": "requestRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "approveRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "rejectRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "isRegistered", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }, { "internalType": "uint256", "name": "registrationTime", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getPendingInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }], "stateMutability": "view", "type": "function" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "string", "name": "acronym", "type": "string" }], "name": "RegistrationRequested", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "name": "RegistrationApproved", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }], "name": "RegistrationRejected", "type": "event" }];
 
-    const CERT_ABI = [{ "inputs": [{ "components": [{ "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }], "internalType": "struct CertificateRegistry.CertificateInput", "name": "_input", "type": "tuple" }], "name": "issueCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }, { "internalType": "string", "name": "_reason", "type": "string" }], "name": "revokeCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }], "name": "verifyCertificate", "outputs": [{ "components": [{ "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }, { "internalType": "string", "name": "institutionName", "type": "string" }, { "internalType": "string", "name": "institutionAcronym", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }, { "internalType": "address", "name": "issuer", "type": "address" }, { "internalType": "bool", "name": "isValid", "type": "bool" }, { "internalType": "string", "name": "revokeReason", "type": "string" }, { "internalType": "uint256", "name": "revokedAt", "type": "uint256" }], "internalType": "struct CertificateRegistry.Certificate", "name": "", "type": "tuple" }], "stateMutability": "view", "type": "function" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "indexed": true, "internalType": "address", "name": "issuer", "type": "address" }, { "indexed": false, "internalType": "string", "name": "institutionName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentId", "type": "string" }, { "indexed": false, "internalType": "string", "name": "programme", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "issuedAt", "type": "uint256" }], "name": "CertificateIssued", "type": "event" }];
+    const CERT_ABI = [{ "inputs": [{ "components": [{ "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }], "internalType": "struct CertificateRegistry.CertificateInput", "name": "_input", "type": "tuple" }], "name": "issueCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }, { "internalType": "string", "name": "_reason", "type": "string" }], "name": "revokeCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }], "name": "verifyCertificate", "outputs": [{ "components": [{ "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }, { "internalType": "string", "name": "institutionName", "type": "string" }, { "internalType": "string", "name": "institutionAcronym", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }, { "internalType": "address", "name": "issuer", "type": "address" }, { "internalType": "bool", "name": "isValid", "type": "bool" }, { "internalType": "string", "name": "revokeReason", "type": "string" }, { "internalType": "uint256", "name": "revokedAt", "type": "uint256" }], "internalType": "struct CertificateRegistry.Certificate", "name": "", "type": "tuple" }], "stateMutability": "view", "type": "function" }, {
+      "anonymous": false, "inputs": [{ "indexed": true, "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "indexed": true, "internalType": "address", "name": "issuer", "type": "address" }, { "indexed": false, "internalType": "string", "name": "institutionName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentId", "type": "string" }, { "indexed": false, "internalType": "string", "name": "programme", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "issuedAt", "type": "uint256" }], "name": "CertificateIssued", "type": "event"
+    }];
 
     let provider, signer, userAddress, isOwner = false, isReg = false, instData = null, computedDocHash = null;
 
     const short = a => a ? a.slice(0, 6) + "..." + a.slice(-4) : "";
-    const fmtDate = u => { if (!u || Number(u) === 0) return "—"; return new Date(Number(u) * 1000).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" }) };
+    const fmtDate = u => {
+      if (!u || Number(u) === 0) return "—";
+      return new Date(Number(u) * 1000).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })
+    };
     const qrUrl = d => `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d)}&margin=10`;
-    function copyTxt(t) { navigator.clipboard.writeText(t).then(() => { const b = event.target; const o = b.textContent; b.textContent = "Copied!"; setTimeout(() => { b.textContent = o }, 1500) }) }
-    function setSt(id, type, msg) { const el = document.getElementById(id); const ico = type === "pending" ? '<span class="spin">⟳</span>' : type === "success" ? "✓" : "✗"; el.className = "tx-st show tx-" + type; el.innerHTML = ico + " " + msg }
-    function clrSt(id) { const el = document.getElementById(id); el.className = "tx-st"; el.innerHTML = "" }
+    function copyTxt(t) {
+      navigator.clipboard.writeText(t).then(() => {
+        const b = event.target; const o = b.textContent; b.textContent = "Copied!";
+        setTimeout(() => { b.textContent = o }, 1500)
+      })
+    }
+    function setSt(id, type, msg) {
+      const el = document.getElementById(id);
+      const ico = type === "pending" ? '<span class="spin">⟳</span>' : type === "success" ? "✓" : "✗"; el.className = "tx-st show tx-" + type; el.innerHTML = ico + " " + msg
+    }
+    function clrSt(id) {
+      const el = document.getElementById(id);
+      el.className = "tx-st"; el.innerHTML = ""
+    }
 
-    function switchTab(n) { document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active")); document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active")); document.getElementById("pane-" + n).classList.add("active"); document.getElementById("tab-" + n).classList.add("active") }
+    function switchTab(n) {
+      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("pane-" + n).classList.add("active");
+      document.getElementById("tab-" + n).classList.add("active")
+    }
 
     // Auto-detect MetaMask account or network changes
     if (window.ethereum) {
@@ -1355,7 +1376,14 @@
       window.ethereum.on("chainChanged", () => { window.location.reload(); });
     }
 
-    window.addEventListener("load", () => { const p = new URLSearchParams(window.location.search); const h = p.get("hash"); if (h) { document.getElementById("verifyHash").value = h; runVerify() } });
+    window.addEventListener("load", () => {
+      const p = new URLSearchParams(window.location.search);
+      const h = p.get("hash");
+      if (h) {
+        document.getElementById("verifyHash").value = h;
+        runVerify()
+      }
+    });
 
     async function connectWallet() {
       if (!window.ethereum) { alert("MetaMask is not installed. Install from metamask.io"); return }
@@ -1428,7 +1456,12 @@
       } catch (e) { console.error("Role detection:", e) }
     }
 
-    function showAdmin() { document.getElementById("adminGate").style.display = "none"; document.getElementById("adminDenied").style.display = "none"; document.getElementById("adminContent").style.display = "block"; loadPending() }
+    function showAdmin() { 
+      document.getElementById("adminGate").style.display = "none"; 
+      document.getElementById("adminDenied").style.display = "none"; 
+      document.getElementById("adminContent").style.display = "block"; 
+      loadPending() 
+    }
 
     function showInstitution(isPend = false) {
       document.getElementById("instGate").style.display = "none"; document.getElementById("instContent").style.display = "block";
@@ -1492,19 +1525,40 @@
 
     async function doRevoke() {
       const h = document.getElementById("revokeHash").value.trim(), r = document.getElementById("revokeReason").value.trim();
-      if (!h || !r) { setSt("revokeSt", "error", "Both fields are required."); return }
+      if (!h || !r) {
+        setSt("revokeSt", "error", "Both fields are required.");
+        return
+      }
       if (!confirm("Revocation is permanent. Proceed?")) return;
-      const btn = document.getElementById("revokeBtn"); btn.disabled = true; setSt("revokeSt", "pending", "Submitting revocation...");
-      try { const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.revokeCertificate(h, r, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("revokeSt", "pending", "Awaiting confirmation..."); await tx.wait(); setSt("revokeSt", "success", "Certificate revoked. Reason and timestamp stored permanently on-chain."); btn.disabled = false }
+      const btn = document.getElementById("revokeBtn");
+      btn.disabled = true;
+      setSt("revokeSt", "pending", "Submitting revocation...");
+      try {
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer);
+        const tx = await cert.revokeCertificate(h, r, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        setSt("revokeSt", "pending", "Awaiting confirmation...");
+        await tx.wait();
+        setSt("revokeSt", "success", "Certificate revoked. Reason and timestamp stored permanently on-chain.");
+        btn.disabled = false
+      }
       catch (e) { setSt("revokeSt", "error", e.reason || e.message); btn.disabled = false }
     }
 
     async function loadHistory() {
       const el = document.getElementById("histContent"); el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
       try {
-        const rp = new ethers.JsonRpcProvider(RPC_URL); const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp); const currentBlock = await rp.getBlockNumber(); const startBlock = Math.max(0, currentBlock - 500); const filter = cert.filters.CertificateIssued(null, userAddress); const events = await cert.queryFilter(filter, startBlock, "latest");
-        if (!events.length) { el.innerHTML = `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`; return }
-        const rows = events.map((ev, i) => `<tr><td>${events.length - i}</td><td><strong>${ev.args.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${ev.args.studentId}</span></td><td>${ev.args.programme}</td><td>${fmtDate(ev.args.issuedAt)}</td><td><span class="mono-sm">${ev.args.metaHash.slice(0, 14)}...</span><br/><button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${ev.args.metaHash}')">Copy hash</button></td></tr>`).join("");
+        const rp = new ethers.JsonRpcProvider(RPC_URL);
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp);
+        const currentBlock = await rp.getBlockNumber();
+        const startBlock = Math.max(0, currentBlock - 500);
+        const filter = cert.filters.CertificateIssued(null, userAddress);
+        const events = await cert.queryFilter(filter, startBlock, "latest");
+        if (!events.length) {
+          el.innerHTML = `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`;
+          return
+        }
+        const rows = events.map((ev, i) => `<tr><td>${events.length - i}</td><td><strong>${ev.args.studentName}</strong><br/><span style="color:var(--n500);
+          font-size:.75rem">${ev.args.studentId}</span></td><td>${ev.args.programme}</td><td>${fmtDate(ev.args.issuedAt)}</td><td><span class="mono-sm">${ev.args.metaHash.slice(0, 14)}...</span><br/><button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${ev.args.metaHash}')">Copy hash</button></td></tr>`).join("");
         el.innerHTML = `<table class="hist-tbl"><thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead><tbody>${rows}</tbody></table>`;
       } catch (e) { el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>` }
     }
@@ -1523,6 +1577,7 @@
           const reqEv = await reg.queryFilter(reg.filters.RegistrationRequested(), Math.max(0, curBlk - 10), "latest");
           recentAddrs = reqEv.map(e => ({ wallet: e.args.wallet, name: e.args.name, acronym: e.args.acronym, website: "" }));
         } catch { }
+
         // Merge both sources, deduplicate by wallet
         const allMap = {};
         for (const r of [...lsPending, ...recentAddrs]) allMap[r.wallet.toLowerCase()] = { wallet: r.wallet, name: r.name, acronym: r.acronym, website: r.website || "" };
@@ -1533,6 +1588,7 @@
         Use the <strong>Look Up an Institution</strong> tool below if you have a wallet address.</p></div>`;
           return;
         }
+
         // For each, check on-chain status
         list.innerHTML = "";
         let shownAny = false;
@@ -1548,6 +1604,7 @@
           el.innerHTML = `<div class="pend-info"><h3>${item.name} <span style="font-weight:400;color:var(--n500)">(${item.acronym})</span></h3>${web ? `<p>${web}</p>` : ""}<div class="pend-addr">${item.wallet}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${item.wallet}','${item.name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${item.wallet}','${item.name}')">✗ Reject</button></div>`;
           list.appendChild(el);
         }
+
         // Clean up approved ones from localStorage
         if (approvedWallets.length > 0) {
           const cleaned = lsPending.filter(r => !approvedWallets.includes(r.wallet.toLowerCase()));
@@ -1560,23 +1617,65 @@
         list.innerHTML = `<div class="empty"><span class="ei">ℹ️</span>
       <p style="color:var(--n700);font-size:.85rem">Use the <strong>Look Up an Institution</strong> tool below.</p></div>`;
       }
+    }
 
-      async function doApprove(addr, name) { setSt("adminSt", "pending", `Approving ${name}...`); try { const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer); const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("adminSt", "pending", "Awaiting confirmation..."); await tx.wait(); setSt("adminSt", "success", `${name} approved — can now issue certificates.`); await loadPending() } catch (e) { setSt("adminSt", "error", e.reason || e.message) } }
-      async function doReject(addr, name) { if (!confirm(`Reject ${name}?`)) return; setSt("adminSt", "pending", `Rejecting ${name}...`); try { const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer); const tx = await reg.rejectRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); await tx.wait(); setSt("adminSt", "success", `${name} rejected.`); await loadPending() } catch (e) { setSt("adminSt", "error", e.reason || e.message) } }
+    async function doApprove(addr, name) {
+      setSt("adminSt", "pending", `Approving ${name}...`);
+      try {
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
+        const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        setSt("adminSt", "pending", "Awaiting confirmation...");
+        await tx.wait();
+        setSt("adminSt", "success", `${name} approved — can now issue certificates.`);
+        await loadPending()
+      }
+      catch (e) {
+        setSt("adminSt", "error", e.reason || e.message)
 
-      async function doLookup() {
-        const addr = document.getElementById("lookupAddr").value.trim(), out = document.getElementById("lookupResult"); if (!addr) return;
-        out.innerHTML = `<p style="font-size:.82rem;color:var(--n400)">Looking up...</p>`;
-        try {
-          const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider); const ok = await reg.isRegistered(addr);
-          if (ok) { const d = await reg.getInstitution(addr); out.innerHTML = `<div style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:16px"><span class="badge b-green">✓ Registered</span><p style="margin-top:10px;font-weight:700">${d[0]} (${d[1]})</p><p style="color:var(--n500);font-size:.82rem">${d[2]}</p><p style="color:var(--n500);font-size:.78rem;margin-top:4px">Registered ${fmtDate(d[3])}</p></div>` }
-          else {
-            let pend = false; let pd = { name: "", acronym: "", website: "" };
-            try { const r = await reg.getPendingInstitution(addr); pend = true; pd = { name: r[0], acronym: r[1], website: r[2] } } catch { }
-            if (pend) {
-              out.innerHTML = `<div style="background:var(--gold-bg);border:1px solid #EDD9A3;border-radius:8px;padding:18px">
+      }
+    }
+
+    async function doReject(addr, name) {
+      if (!confirm(`Reject ${name}?`)) return;
+      setSt("adminSt", "pending", `Rejecting ${name}...`);
+      try {
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
+        const tx = await reg.rejectRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        await tx.wait();
+        setSt("adminSt", "success", `${name} rejected.`);
+        await loadPending()
+      } catch (e) {
+        setSt("adminSt", "error", e.reason || e.message)
+      }
+    }
+
+    async function doLookup() {
+      const addr = document.getElementById("lookupAddr").value.trim(), out = document.getElementById("lookupResult"); if (!addr) return;
+      out.innerHTML = `<p style="font-size:.82rem;color:var(--n400)">Looking up...</p>`;
+      try {
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
+        const ok = await reg.isRegistered(addr);
+        if (ok) {
+          const d = await reg.getInstitution(addr);
+          out.innerHTML = `<div style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:16px"><span class="badge b-green">✓ Registered</span><p style="margin-top:10px;font-weight:700">${d[0]} (${d[1]})</p><p style="color:var(--n500);font-size:.82rem">${d[2]}</p><p style="color:var(--n500);font-size:.78rem;margin-top:4px">Registered ${fmtDate(d[3])}</p></div>`
+        }
+        else {
+          let pend = false;
+          let pd = { name: "", acronym: "", website: "" };
+          try {
+            const r = await reg.getPendingInstitution(addr);
+            pend = true; pd = { name: r[0], acronym: r[1], website: r[2] }
+          }
+          catch { }
+          if (pend) {
+            out.innerHTML = `<div style="background:var(--gold-bg);border:1px solid #EDD9A3;border-radius:8px;
+            padding:18px">
           <span class="badge b-amber">⏳ Pending Approval</span>
-          <p style="margin-top:12px;font-weight:700;font-size:.95rem">${pd.name} (${pd.acronym})</p>
+          <p style="margin-top:12px;
+          font-weight:700;
+          font-size:.95rem">
+          ${pd.name} (${pd.acronym})
+          </p>
           ${pd.website ? `<p style="color:var(--n500);font-size:.82rem;margin-top:4px">${pd.website}</p>` : ""}
           <p style="font-family:monospace;font-size:.72rem;color:var(--n400);margin-top:6px;word-break:break-all">${addr}</p>
           <div style="display:flex;gap:10px;margin-top:16px">
@@ -1584,30 +1683,41 @@
             <button class="btn btn-danger btn-sm" onclick="doReject('${addr}','${pd.name}')">✗ Reject</button>
           </div>
         </div>`;
-            } else {
-              out.innerHTML = `<div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:14px"><span class="badge b-red">Not Registered</span></div>`;
-            }
+          } else {
+            out.innerHTML = `<div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:14px"><span class="badge b-red">Not Registered</span></div>`;
           }
-        } catch (e) { out.innerHTML = `<p style="font-size:.82rem;color:var(--revoked)">Error: ${e.message}</p>` }
+        }
+      } catch (e) { out.innerHTML = `<p style="font-size:.82rem;color:var(--revoked)">Error: ${e.message}</p>` }
+    }
+
+    async function runVerify() {
+      const hash = document.getElementById("verifyHash").value.trim();
+      document.getElementById("certCard").style.display = "none";
+      if (!hash.startsWith("0x") || hash.length !== 66) { setSt("verifySt", "error", "Enter a valid certificate hash — starts with 0x, exactly 66 characters."); return }
+      const btn = document.getElementById("verifyBtn"); btn.disabled = true; setSt("verifySt", "pending", "Querying Polygon Amoy blockchain...");
+      try {
+        const rp = new ethers.JsonRpcProvider(RPC_URL);
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp);
+        const c = await cert.verifyCertificate(hash); clrSt("verifySt");
+        showResult(c, hash);
+      } catch (e) {
+        let msg = e.message || "Unknown error";
+        if (msg.includes("Certificate not found")) msg = "No certificate found for this hash. Please check and try again.";
+        setSt("verifySt", "error", msg)
       }
+      finally { btn.disabled = false }
+    }
 
-      async function runVerify() {
-        const hash = document.getElementById("verifyHash").value.trim();
-        document.getElementById("certCard").style.display = "none";
-        if (!hash.startsWith("0x") || hash.length !== 66) { setSt("verifySt", "error", "Enter a valid certificate hash — starts with 0x, exactly 66 characters."); return }
-        const btn = document.getElementById("verifyBtn"); btn.disabled = true; setSt("verifySt", "pending", "Querying Polygon Amoy blockchain...");
-        try {
-          const rp = new ethers.JsonRpcProvider(RPC_URL); const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp); const c = await cert.verifyCertificate(hash); clrSt("verifySt"); showResult(c, hash);
-        } catch (e) { let msg = e.message || "Unknown error"; if (msg.includes("Certificate not found")) msg = "No certificate found for this hash. Please check and try again."; setSt("verifySt", "error", msg) }
-        finally { btn.disabled = false }
-      }
+    function clearResult() { 
+      document.getElementById("verifyHash").value = ""; 
+      document.getElementById("certCard").style.display = "none"; 
+      clrSt("verifySt") 
+    }
 
-      function clearResult() { document.getElementById("verifyHash").value = ""; document.getElementById("certCard").style.display = "none"; clrSt("verifySt") }
-
-      function showResult(c, hash) {
-        const valid = c.isValid;
-        document.getElementById("certHero").innerHTML = `<span class="shield-icon ${valid ? "shield-valid" : "shield-revoked"}">${valid ? "🛡️" : "🚫"}</span><div class="result-title ${valid ? "valid" : "revoked"}">${valid ? "CERTIFICATE VALID" : "CERTIFICATE REVOKED"}</div><div class="result-sub">${valid ? "This certificate has been verified as authentic on the Polygon Amoy blockchain." : "This certificate has been revoked by the issuing institution."}</div>`;
-        document.getElementById("certFields").innerHTML = `
+    function showResult(c, hash) {
+      const valid = c.isValid;
+      document.getElementById("certHero").innerHTML = `<span class="shield-icon ${valid ? "shield-valid" : "shield-revoked"}">${valid ? "🛡️" : "🚫"}</span><div class="result-title ${valid ? "valid" : "revoked"}">${valid ? "CERTIFICATE VALID" : "CERTIFICATE REVOKED"}</div><div class="result-sub">${valid ? "This certificate has been verified as authentic on the Polygon Amoy blockchain." : "This certificate has been revoked by the issuing institution."}</div>`;
+      document.getElementById("certFields").innerHTML = `
     <div class="cf"><div class="cf-lbl">Student Name</div><div class="cf-val">${c.studentName}</div></div>
     <div class="cf"><div class="cf-lbl">Student ID</div><div class="cf-val">${c.studentId}</div></div>
     <div class="cf full"><div class="cf-lbl">Issuing Institution</div><div class="cf-val">${c.institutionName} (${c.institutionAcronym})</div></div>
@@ -1620,13 +1730,17 @@
     <div class="cf full"><div class="cf-lbl">Document Fingerprint (SHA-256 docHash)</div><div class="cf-val mono">${c.docHash}</div></div>
     ${c.ipfsCid && c.ipfsCid !== "" && c.ipfsCid !== "QmTestCidPlaceholder" ? `<div class="cf full"><div class="cf-lbl">IPFS Document</div><div class="cf-val"><a href="https://ipfs.io/ipfs/${c.ipfsCid}" target="_blank" rel="noopener" style="color:var(--g600)">${c.ipfsCid}</a></div></div>` : ""}
     ${!valid ? `<div class="cf full alert"><div class="cf-lbl">Revocation Reason</div><div class="cf-val">${c.revokeReason}</div><div class="cf-lbl" style="margin-top:10px">Revoked On</div><div class="cf-val">${fmtDate(c.revokedAt)}</div></div>` : ""}`;
-        if (valid) { const link = PAGE_URL + "?hash=" + hash; document.getElementById("qrImg").src = qrUrl(link); document.getElementById("qrSec").style.display = "flex" }
-        else { document.getElementById("qrSec").style.display = "none" }
-        document.getElementById("resultActs").innerHTML = `<button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button><button class="btn btn-ghost btn-sm" onclick="copyTxt('${hash}')">📋 Copy Hash</button><button class="btn btn-ghost btn-sm" onclick="clearResult()">✕ Clear</button>`;
-        document.getElementById("certCard").style.display = "block";
-        document.getElementById("certCard").scrollIntoView({ behavior: "smooth" });
+      if (valid) {
+        const link = PAGE_URL + "?hash=" + hash;
+        document.getElementById("qrImg").src = qrUrl(link);
+        document.getElementById("qrSec").style.display = "flex"
       }
+      else { document.getElementById("qrSec").style.display = "none" }
+      document.getElementById("resultActs").innerHTML = `<button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button><button class="btn btn-ghost btn-sm" onclick="copyTxt('${hash}')">📋 Copy Hash</button><button class="btn btn-ghost btn-sm" onclick="clearResult()">✕ Clear</button>`;
+      document.getElementById("certCard").style.display = "block";
+      document.getElementById("certCard").scrollIntoView({ behavior: "smooth" });
     }
   </script>
 </body>
+
 </html>
