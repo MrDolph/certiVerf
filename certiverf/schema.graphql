@@ -1,0 +1,28 @@
+type RegistrationApproved @entity(immutable: true) {
+  id: Bytes!
+  wallet: Bytes! # address
+  name: String! # string
+  timestamp: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type RegistrationRejected @entity(immutable: true) {
+  id: Bytes!
+  wallet: Bytes! # address
+  name: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type RegistrationRequested @entity(immutable: true) {
+  id: Bytes!
+  wallet: Bytes! # address
+  name: String! # string
+  acronym: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
