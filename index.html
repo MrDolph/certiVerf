@@ -59,6 +59,10 @@
       font-size: 15px
     }
 
+    body.tab-loading .tab-pane {
+      display: none !important;
+    }
+
     /* HEADER */
     header {
       background: var(--dark);
@@ -1017,7 +1021,7 @@
   </style>
 </head>
 
-<body>
+<body class="tab-loading">
 
   <header>
     <div class="brand">
@@ -1374,7 +1378,8 @@
       document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       document.getElementById("pane-" + n).classList.add("active");
-      document.getElementById("tab-" + n).classList.add("active")
+      document.getElementById("tab-" + n).classList.add("active");
+      sessionStorage.setItem("activeTab", n);
     }
 
     // Auto-detect MetaMask account or network changes
@@ -1428,6 +1433,11 @@
           document.getElementById("connectBtn").textContent = "Connected";
           await detectRole();
         }
+
+        // Restore active tab instantly before anything renders
+        const savedTab = sessionStorage.getItem("activeTab");
+        if (savedTab) switchTab(savedTab);
+        document.body.classList.remove("tab-loading");
       }
     });
 
