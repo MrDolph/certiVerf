@@ -1659,12 +1659,20 @@
     async function loadHistory() {
       const el = document.getElementById("histContent"); el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
       try {
-        const rp = new ethers.JsonRpcProvider("https://polygon-amoy.public.blastapi.io");
+        const rp = new ethers.JsonRpcProvider(RPC_URL);
         const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp);
         const currentBlock = await rp.getBlockNumber();
-        const startBlock = 41500000;
+        const DEPLOY_BLOCK = 41500000;
+        const CHUNK = 9; // Stay within Alchemy 10 block limit
         const filter = cert.filters.CertificateIssued(null, userAddress);
-        const events = await cert.queryFilter(filter, startBlock, "latest");
+        let events = [];
+        for (let from = DEPLOY_BLOCK; from <= currentBlock; from += CHUNK) {
+          const to = Math.min(from + CHUNK - 1, currentBlock);
+          try {
+            const chunk = await cert.queryFilter(filter, from, to);
+            events = events.concat(chunk);
+          } catch { }
+        }
         if (!events.length) {
           el.innerHTML = `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet</p></div>`;
           return
