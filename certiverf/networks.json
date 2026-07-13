@@ -3,6 +3,9 @@
     "InstitutionRegistry": {
       "address": "0x5416e493590141D710F367afA994F97A58116834",
       "startBlock": 41541811
+    },
+    "CertificateRegistry": {
+      "address": "0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5"
     }
   }
 }

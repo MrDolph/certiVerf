@@ -26,3 +26,27 @@ type RegistrationRequested @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+type CertificateIssued @entity(immutable: true) {
+  id: Bytes!
+  metaHash: Bytes! # bytes32
+  issuer: Bytes! # address
+  institutionName: String! # string
+  studentName: String! # string
+  studentId: String! # string
+  programme: String! # string
+  issuedAt: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type CertificateRevoked @entity(immutable: true) {
+  id: Bytes!
+  metaHash: Bytes! # bytes32
+  issuer: Bytes! # address
+  reason: String! # string
+  revokedAt: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

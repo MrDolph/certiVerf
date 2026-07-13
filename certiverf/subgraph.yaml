@@ -30,3 +30,27 @@ dataSources:
         - event: RegistrationRequested(indexed address,string,string)
           handler: handleRegistrationRequested
       file: ./src/institution-registry.ts
+  - kind: ethereum
+    name: CertificateRegistry
+    network: polygon-amoy
+    source:
+      address: "0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5"
+      abi: CertificateRegistry
+      startBlock: 41543418
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - CertificateIssued
+        - CertificateRevoked
+      abis:
+        - name: CertificateRegistry
+          file: ./abis/CertificateRegistry.json
+      eventHandlers:
+        - event: CertificateIssued(indexed bytes32,indexed
+            address,string,string,string,string,uint256)
+          handler: handleCertificateIssued
+        - event: CertificateRevoked(indexed bytes32,indexed address,string,uint256)
+          handler: handleCertificateRevoked
+      file: ./src/certificate-registry.ts
