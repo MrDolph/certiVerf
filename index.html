@@ -1659,10 +1659,10 @@
     async function loadHistory() {
       const el = document.getElementById("histContent"); el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from blockchain...</p></div>`;
       try {
-        const rp = new ethers.JsonRpcProvider(RPC_URL);
+        const rp = new ethers.JsonRpcProvider("https://polygon-amoy.public.blastapi.io");
         const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp);
         const currentBlock = await rp.getBlockNumber();
-        const startBlock = Math.max(0, currentBlock - 500);
+        const startBlock = 41500000;
         const filter = cert.filters.CertificateIssued(null, userAddress);
         const events = await cert.queryFilter(filter, startBlock, "latest");
         if (!events.length) {
