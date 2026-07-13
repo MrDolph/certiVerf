@@ -1402,6 +1402,34 @@
       }
     });
 
+    // Auto-reconnect on page refresh if MetaMask was previously connected
+    window.addEventListener("load", async () => {
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: "eth_accounts" });
+        if (accounts.length > 0) {
+          // Wallet already connected — silently reconnect without prompting
+          provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+          userAddress = await signer.getAddress();
+          const net = await provider.getNetwork();
+          const nb = document.getElementById("netBadge");
+          nb.classList.add("show");
+          if (Number(net.chainId) === AMOY_ID) {
+            nb.className = "net-badge show ok";
+            nb.textContent = "Polygon Amoy ✓";
+          } else {
+            nb.className = "net-badge show wrong";
+            nb.textContent = "Wrong network — switch to Polygon Amoy";
+          }
+          document.getElementById("walletAddr").textContent = short(userAddress);
+          document.getElementById("walletPill").classList.add("show");
+          document.getElementById("disconnectBtn").style.display = "block";
+          document.getElementById("connectBtn").textContent = "Connected";
+          await detectRole();
+        }
+      }
+    });
+
     async function connectWallet() {
       if (!window.ethereum) { alert("MetaMask is not installed. Install from metamask.io"); return }
       const btn = document.getElementById("connectBtn"); btn.textContent = "Connecting..."; btn.disabled = true;
