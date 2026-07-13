@@ -1311,6 +1311,23 @@
           </div>
         </div>
       </div>
+      <!-- Registered Institutions -->
+      <div class="card" id="regInstCard" style="display:none">
+        <div class="card-hdr">
+          <div>
+            <h2>Registered Institutions</h2>
+            <p>All NUC-approved institutions</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadRegistered()">↻ Refresh</button>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <div id="registeredList" style="padding:20px">
+            <div class="empty"><span class="ei">🏛️</span>
+              <p>Click Refresh to load</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -1456,11 +1473,78 @@
       } catch (e) { console.error("Role detection:", e) }
     }
 
-    function showAdmin() { 
-      document.getElementById("adminGate").style.display = "none"; 
-      document.getElementById("adminDenied").style.display = "none"; 
-      document.getElementById("adminContent").style.display = "block"; 
-      loadPending() 
+    function showAdmin() {
+      document.getElementById("adminGate").style.display = "none";
+      document.getElementById("adminDenied").style.display = "none";
+      document.getElementById("adminContent").style.display = "block";
+      document.getElementById("regInstCard").style.display = "block";
+      loadPending();
+      loadRegistered();
+    }
+
+    async function loadRegistered() {
+      const el = document.getElementById("registeredList");
+      el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading registered institutions from blockchain...</p></div>`;
+      try {
+        // Use Blast API — better eth_getLogs range support than Alchemy
+        const rp = new ethers.JsonRpcProvider("https://polygon-amoy.public.blastapi.io");
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, rp);
+        // Query all RegistrationApproved events from Set 2 deployment block
+        const events = await reg.queryFilter(reg.filters.RegistrationApproved(), 41500000, "latest");
+        if (events.length === 0) {
+          el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No registered institutions found on the blockchain yet.</p></div>`;
+          return;
+        }
+        let rows = "";
+        for (const ev of events) {
+          try {
+            const d = await reg.getInstitution(ev.args.wallet);
+            const isStillReg = await reg.isRegistered(ev.args.wallet);
+            if (!isStillReg) continue;
+            rows += `<tr>
+          <td><strong>${d[0]}</strong></td>
+          <td>${d[1]}</td>
+          <td><a href="${d[2]}" target="_blank" rel="noopener" style="color:var(--g600);font-size:.82rem">${d[2]}</a></td>
+          <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${ev.args.wallet.slice(0, 10)}...${ev.args.wallet.slice(-6)}</td>
+          <td><span class="badge b-green" style="font-size:.65rem">✓ Active</span></td>
+        </tr>`;
+            // Cache in localStorage for fallback
+            const lsApp = JSON.parse(localStorage.getItem("cv_approved") || "[]");
+            if (!lsApp.find(i => i.wallet.toLowerCase() === ev.args.wallet.toLowerCase())) {
+              lsApp.push({ wallet: ev.args.wallet, name: d[0], approvedAt: Date.now() });
+              localStorage.setItem("cv_approved", JSON.stringify(lsApp));
+            }
+          } catch { continue; }
+        }
+        if (!rows) {
+          el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No active registered institutions found.</p></div>`;
+          return;
+        }
+        el.innerHTML = `<table class="hist-tbl">
+      <thead><tr><th>Institution</th><th>Acronym</th><th>Website</th><th>Wallet</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+      } catch (e) {
+        // Blast API failed — fall back to localStorage cache
+        const lsApproved = JSON.parse(localStorage.getItem("cv_approved") || "[]");
+        if (lsApproved.length > 0) {
+          const reg2 = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
+          let rows = "";
+          for (const inst of lsApproved) {
+            try {
+              const d = await reg2.getInstitution(inst.wallet);
+              rows += `<tr><td><strong>${d[0]}</strong></td><td>${d[1]}</td><td>${d[2]}</td>
+            <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${inst.wallet.slice(0, 10)}...${inst.wallet.slice(-6)}</td>
+            <td><span class="badge b-green" style="font-size:.65rem">✓ Active</span></td></tr>`;
+            } catch { continue; }
+          }
+          if (rows) {
+            el.innerHTML = `<table class="hist-tbl"><thead><tr><th>Institution</th><th>Acronym</th><th>Website</th><th>Wallet</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+            return;
+          }
+        }
+        el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>Could not load: ${e.message}</p></div>`;
+      }
     }
 
     function showInstitution(isPend = false) {
@@ -1514,7 +1598,7 @@
       const dHash = computedDocHash || ethers.zeroPadValue("0x01", 32);
       const btn = document.getElementById("issueBtn"); btn.disabled = true; document.getElementById("issueResult").style.display = "none"; setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
       try {
-        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); const receipt = await tx.wait();
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 }); setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); const receipt = await tx.wait();
         let mHash = ""; for (const log of receipt.logs) { try { const p = cert.interface.parseLog(log); if (p && p.name === "CertificateIssued") { mHash = p.args.metaHash; break } } catch { } }
         setSt("issueSt", "success", "Certificate issued and permanently stored on the blockchain.");
         document.getElementById("issuedHash").textContent = mHash;
@@ -1626,8 +1710,13 @@
         const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
         setSt("adminSt", "pending", "Awaiting confirmation...");
         await tx.wait();
+        const lsApp = JSON.parse(localStorage.getItem("cv_approved") || "[]");
+        if (!lsApp.find(i => i.wallet.toLowerCase() === addr.toLowerCase()))
+          lsApp.push({ wallet: addr, name: name, approvedAt: Date.now() });
+        localStorage.setItem("cv_approved", JSON.stringify(lsApp));
         setSt("adminSt", "success", `${name} approved — can now issue certificates.`);
-        await loadPending()
+        await loadPending();
+        loadRegistered();
       }
       catch (e) {
         setSt("adminSt", "error", e.reason || e.message)
@@ -1657,6 +1746,13 @@
         const ok = await reg.isRegistered(addr);
         if (ok) {
           const d = await reg.getInstitution(addr);
+          // Auto-save to approved list so Registered Institutions shows it
+          const lsApp = JSON.parse(localStorage.getItem("cv_approved") || "[]");
+          if (!lsApp.find(i => i.wallet.toLowerCase() === addr.toLowerCase())) {
+            lsApp.push({ wallet: addr, name: d[0], approvedAt: Date.now() });
+            localStorage.setItem("cv_approved", JSON.stringify(lsApp));
+          }
+          loadRegistered();
           out.innerHTML = `<div style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:16px"><span class="badge b-green">✓ Registered</span><p style="margin-top:10px;font-weight:700">${d[0]} (${d[1]})</p><p style="color:var(--n500);font-size:.82rem">${d[2]}</p><p style="color:var(--n500);font-size:.78rem;margin-top:4px">Registered ${fmtDate(d[3])}</p></div>`
         }
         else {
@@ -1708,10 +1804,10 @@
       finally { btn.disabled = false }
     }
 
-    function clearResult() { 
-      document.getElementById("verifyHash").value = ""; 
-      document.getElementById("certCard").style.display = "none"; 
-      clrSt("verifySt") 
+    function clearResult() {
+      document.getElementById("verifyHash").value = "";
+      document.getElementById("certCard").style.display = "none";
+      clrSt("verifySt")
     }
 
     function showResult(c, hash) {
