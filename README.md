@@ -2,7 +2,7 @@
 
 > **MSc CIT899 Thesis Prototype** · National Open University of Nigeria (NOUN)  
 > **Author:** Dawodu Fatai Olalekan · Student ID: NOU234249189  
-> **Supervisor:** Lagos Mainland I Study Centre  
+> **Study Centre:** Lagos Mainland I  
 > **Deployed Network:** Polygon Amoy Testnet (Chain ID: 80002)
 
 ---
@@ -15,14 +15,15 @@
 4. [Smart Contracts](#4-smart-contracts)
 5. [Key Design Decisions](#5-key-design-decisions)
 6. [Frontend Portal — CertiVerf](#6-frontend-portal--certiverf)
-7. [Technology Stack](#7-technology-stack)
-8. [Repository Structure](#8-repository-structure)
-9. [Setup and Deployment Guide](#9-setup-and-deployment-guide)
-10. [How to Use Each Portal](#10-how-to-use-each-portal)
-11. [Test Scenarios and Results](#11-test-scenarios-and-results)
-12. [Known Issues and Learnings](#12-known-issues-and-learnings)
-13. [How This Differs from Existing Systems](#13-how-this-differs-from-existing-systems)
-14. [References](#14-references)
+7. [The Graph Subgraph](#7-the-graph-subgraph)
+8. [Technology Stack](#8-technology-stack)
+9. [Repository Structure](#9-repository-structure)
+10. [Setup and Deployment Guide](#10-setup-and-deployment-guide)
+11. [How to Use Each Portal](#11-how-to-use-each-portal)
+12. [Test Scenarios and Results](#12-test-scenarios-and-results)
+13. [Known Issues and Learnings](#13-known-issues-and-learnings)
+14. [How This Differs from Existing Systems](#14-how-this-differs-from-existing-systems)
+15. [References](#15-references)
 
 ---
 
@@ -32,15 +33,15 @@ CertiVerf is a blockchain-based academic certificate verification system designe
 
 ### Problem Statement
 
-Academic credential fraud is a documented challenge in Nigerian higher institutions. Existing verification approaches — manual institutional queries and the NCVS database — cannot provide cryptographic proof that a certificate has not been altered after issuance. The NCVS, established under the National Education Repository and Databank (NERD) Policy (Official Gazette No. 200, 2025), provides administrative centralisation but is technology-agnostic: a record in the NCVS database can in principle be modified without leaving a cryptographic audit trail.
+Academic credential fraud is a documented challenge in Nigerian higher institutions. The NCVS, established under the National Education Repository and Databank (NERD) Policy (Official Gazette No. 200, 2025), provides administrative centralisation but is technology-agnostic — a record in the NCVS database can in principle be modified without any cryptographic audit trail.
 
 ### Solution
 
-CertiVerf deploys two Solidity smart contracts on the Polygon Amoy public testnet and provides a role-aware frontend portal for three user types:
+CertiVerf deploys two Solidity smart contracts on the Polygon Amoy public testnet, a role-aware frontend portal, and a decentralised event indexing subgraph via The Graph Protocol. It serves three user types:
 
 | Role | Actor | Capability |
 |---|---|---|
-| **NUC Admin** | Regulatory authority (NUC) | Approve / reject institution registrations |
+| **NUC Admin** | Regulatory authority (NUC) | Approve / reject institution registrations, view statistics |
 | **Institution** | NUC-accredited university | Issue, revoke, and track certificates |
 | **Public Verifier** | Employer / admissions officer | Verify any certificate — no wallet required |
 
@@ -54,50 +55,53 @@ CertiVerf deploys two Solidity smart contracts on the Polygon Amoy public testne
 ```
 0x0ffdf8e50a445961d32e8d85dddcb73106185a8d70345d35dda551b06f030dba
 ```
-Paste this into the Verify Certificate tab to see a live result from the blockchain.
+Paste this into the Verify Certificate portal to see a live result from the blockchain — or scan the QR code from a mobile device to auto-verify.
+
+**The Graph Subgraph (GraphQL):**
+```
+https://api.studio.thegraph.com/query/1756477/certiverf/v0.0.1
+```
 
 ---
 
 ## 3. System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    ACTORS                                │
-│   NUC Admin Wallet    Institution Wallet    Any Browser  │
-└──────────┬──────────────────┬──────────────────┬────────┘
-           │                  │                  │
-           ▼                  ▼                  ▼
-┌─────────────────────────────────────────────────────────┐
-│              CertiVerf Portal (index.html)               │
-│   NUC Admin Tab │ Institution Tab │ Verify Tab           │
-│   ethers.js v6 — BrowserProvider (write) /               │
-│                   JsonRpcProvider (read)                  │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-           ┌───────────────┴───────────────┐
-           ▼                               ▼
-┌──────────────────┐             ┌─────────────────────┐
-│ InstitutionRegistry│◄──checks──│ CertificateRegistry │
-│ .sol              │            │ .sol                │
-│                   │            │                     │
-│ Manages who can   │            │ Manages credential  │
-│ issue credentials │            │ lifecycle           │
-└──────────────────┘            └─────────────────────┘
-           │                               │
-           └───────────────┬───────────────┘
-                           ▼
-          ┌────────────────────────────────┐
-          │  Polygon Amoy Testnet          │
-          │  Chain ID: 80002               │
-          │  RPC: Alchemy dedicated key    │
-          └────────────────────────────────┘
-                           │
-                    (off-chain storage)
-                           ▼
-          ┌────────────────────────────────┐
-          │  IPFS via Pinata               │
-          │  Certificate PDF documents     │
-          └────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                         ACTORS                               │
+│   NUC Admin Wallet    Institution Wallet    Any Browser      │
+└──────────┬───────────────────┬──────────────────┬───────────┘
+           │                   │                  │
+           ▼                   ▼                  ▼
+┌──────────────────────────────────────────────────────────────┐
+│       CertiVerf Portal (index.html + scripts.js)             │
+│  ┌──────────────────┐  ┌─────────────────┐  ┌────────────┐  │
+│  │  Landing Page    │  │ Role Detection  │  │ Session    │  │
+│  │  Role Selector   │→ │ (on-chain check)│  │ Storage    │  │
+│  └──────────────────┘  └─────────────────┘  └────────────┘  │
+│  ethers.js v6 — BrowserProvider (write) / JsonRpcProvider    │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+              ┌────────────────┴────────────────┐
+              ▼                                 ▼
+┌─────────────────────┐             ┌───────────────────────┐
+│  InstitutionRegistry│◄──checks────│  CertificateRegistry  │
+│  .sol               │             │  .sol                 │
+└─────────────────────┘             └───────────────────────┘
+              │                                 │
+              └──────────────┬──────────────────┘
+                             ▼
+            ┌────────────────────────────────┐
+            │  Polygon Amoy Testnet          │
+            │  Chain ID: 80002               │
+            └────────────────────────────────┘
+                   │                    │
+        (off-chain storage)    (event indexing)
+                   ▼                    ▼
+      ┌─────────────────────┐  ┌──────────────────────┐
+      │  IPFS via Pinata    │  │  The Graph Protocol  │
+      │  Certificate PDFs   │  │  GraphQL Subgraph    │
+      └─────────────────────┘  └──────────────────────┘
 ```
 
 ---
@@ -108,14 +112,12 @@ Paste this into the Verify Certificate tab to see a live result from the blockch
 
 | Contract | Address | Sourcify |
 |---|---|---|
-| `InstitutionRegistry.sol` | `0xCeB1502bD34a71eA45A3cAB6FCF5Cc8D0009A944` | [View verified source](https://repo.sourcify.dev/80002/0xCeB1502bD34a71eA45A3cAB6FCF5Cc8D0009A944/) |
-| `CertificateRegistry.sol` | `0x7C280568dD991f471DBe5e6eE430624B93F712fF` | [View verified source](https://repo.sourcify.dev/80002/0x7C280568dD991f471DBe5e6eE430624B93F712fF/) |
+| `InstitutionRegistry.sol` | `0x5416e493590141D710F367afA994F97A58116834` | [View verified source](https://repo.sourcify.dev/80002/0x5416e493590141D710F367afA994F97A58116834/) |
+| `CertificateRegistry.sol` | `0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5` | [View verified source](https://repo.sourcify.dev/80002/0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5/) |
 
-Both contracts are Sourcify-verified — the source code visible here is identical to the bytecode executing on the blockchain.
+**Deploying wallet:** `0x44F586b4991B622fC44b31225aAE0B85415EfB6e` (Fatai CertiVerf Wallet — NUC Admin)
 
 ### InstitutionRegistry.sol
-
-Manages the two-stage institution onboarding process:
 
 ```
 requestRegistration(name, acronym, website)  → any wallet
@@ -127,8 +129,6 @@ getPendingInstitution(wallet)                 → public view
 ```
 
 ### CertificateRegistry.sol
-
-Manages the full credential lifecycle:
 
 ```
 issueCertificate(CertificateInput)     → registered institutions only
@@ -142,7 +142,7 @@ getCertificateIssuer(metaHash)         → public view
 | Field | Type | Source | Purpose |
 |---|---|---|---|
 | `metaHash` | `bytes32` | Computed on-chain | Unique identifier (keccak256 of metadata) |
-| `docHash` | `bytes32` | Browser (SHA-256) | PDF document fingerprint |
+| `docHash` | `bytes32` | Browser SHA-256 | PDF document fingerprint |
 | `ipfsCid` | `string` | Institution input | IPFS link to certificate document |
 | `institutionName` | `string` | InstitutionRegistry | Official name — NOT user input |
 | `institutionAcronym` | `string` | InstitutionRegistry | e.g. UNILAG, OAU, NOUN |
@@ -164,393 +164,275 @@ getCertificateIssuer(metaHash)         → public view
 
 ### 5.1 Dual-Hash Scheme — Primary Technical Contribution
 
-Every certificate stores two independent cryptographic hashes:
-
 **metaHash** — computed ON-CHAIN:
 ```solidity
 bytes32 metaHash = keccak256(abi.encodePacked(
-    msg.sender,           // issuing institution's wallet
-    _input.studentId,     // student matric number
-    _input.programme,     // degree programme
-    _input.completionYear // graduation year
+    msg.sender, _input.studentId, _input.programme, _input.completionYear
 ));
 ```
 
 **docHash** — computed IN THE BROWSER:
 ```javascript
-const buffer = await file.arrayBuffer();
-const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+const hashBuffer = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
 const docHash = '0x' + Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 ```
 
-Both hashes are stored permanently on-chain. During verification, the verifier can independently re-compute the SHA-256 of the downloaded IPFS document and compare it to the stored `docHash`. Any document substitution is immediately detectable.
-
-**Why this matters:** All prior systems reviewed — including ShikkhaChain (Farabi et al., 2025) and Verifi-Chain (Rahman et al., 2023) — store only the IPFS CID on-chain. This means document substitution at the IPFS layer is undetectable. CertiVerf's dual-hash scheme addresses this gap.
+Both stored permanently on-chain. All prior systems reviewed — including ShikkhaChain (Farabi et al., 2025) — store only the IPFS CID without a separate document fingerprint.
 
 ### 5.2 No Post-Issuance Modification
-
-`CertificateRegistry.sol` has no function to update or replace any field after issuance. This is a deliberate architectural decision — immutability is enforced structurally, not by policy.
-
-The reference implementation CertiQ includes an `updateIpfsHash()` function that allows an institution to silently swap the linked document. CertiVerf explicitly does not include this.
+Immutability enforced structurally. No update function exists. CertiQ's `updateIpfsHash()` vulnerability is explicitly excluded.
 
 ### 5.3 Institution Name from Registry
-
-The `institutionName` field in every certificate is derived from the contract:
-```solidity
-(string memory instName, string memory instAcronym,,) =
-    registry.getInstitution(msg.sender);
-```
-It is **not** a free-text input from the institution. This prevents a registered institution from issuing certificates claiming to be from a different institution.
+`institutionName` derived from `registry.getInstitution(msg.sender)` — not user input. Prevents institution identity fraud.
 
 ### 5.4 Wallet-Free Public Verification
-
-The public verification portal uses `ethers.js JsonRpcProvider` — a read-only blockchain connection. No MetaMask, no wallet, no gas fee required. Any employer with a browser can verify.
-
-```javascript
-const provider = new ethers.JsonRpcProvider(RPC_URL);
-const contract = new ethers.Contract(CERT_ADDRESS, ABI, provider);
-const cert = await contract.verifyCertificate(metaHash);
-```
+`ethers.js JsonRpcProvider` — read-only. No MetaMask, no wallet, no gas required for verification.
 
 ### 5.5 Two-Contract Architecture
-
-Separating governance (InstitutionRegistry) from records (CertificateRegistry) means:
-- Certificate records are not affected if governance logic is updated
-- The NUC admin role is explicitly encoded in the owner of InstitutionRegistry
-- CertificateRegistry links to InstitutionRegistry at deployment time and cannot be re-pointed
+InstitutionRegistry (governance) separated from CertificateRegistry (records). NUC admin role encoded in contract ownership.
 
 ---
 
 ## 6. Frontend Portal — CertiVerf
 
-**File:** `index.html` (single self-contained file, no dependencies to install)
+Three files: `index.html` (structure), `scripts.js` (logic), `styles.css` (Nigerian green/gold theme).
 
-### Role Detection
+### Landing Page
+Full-screen role selector on first visit. Three cards: Verify Certificate, Institution Portal, NUC Admin. `sessionStorage` remembers chosen role — refresh skips landing. **Change Role** button in header returns to landing.
 
-After connecting MetaMask, the portal automatically queries InstitutionRegistry to determine the user's role:
+### NUC Admin Portal
+- Pending applications queue (auto-loads)
+- Look Up tool with inline Approve/Reject buttons
+- Registered Institutions table (The Graph)
+- Certificate Statistics — total issued + per-institution breakdown (The Graph)
 
-```
-Owner wallet      → NUC Admin Portal
-Registered wallet → Institution Portal (issue, revoke, history)
-Pending wallet    → Status: Awaiting NUC Approval
-Any other wallet  → Registration form + Public Verify
-```
+### Institution Portal
+- NUC registration form
+- Certificate issuance with auto SHA-256 PDF fingerprinting (Web Crypto API)
+- Certificate history (The Graph)
+- Certificate revocation with mandatory on-chain reason
+- QR code generation after issuance
 
-### QR Code Verification
-
-After certificate issuance, a QR code is generated encoding:
-```
-https://mrdolph.github.io/certiVerf/?hash=0x[metaHash]
-```
-
-Scanning this QR code on any device opens the portal and verifies the certificate automatically without any user input.
-
-### SHA-256 Document Fingerprinting
-
-When an institution uploads a PDF before issuance, the browser computes the SHA-256 hash using the native Web Crypto API. The computed `docHash` is displayed before submission so the institution can confirm it.
-
-### Certificate History
-
-Registered institutions can load their full issuance history from blockchain events:
-```javascript
-const filter = cert.filters.CertificateIssued(null, userAddress);
-const events = await cert.queryFilter(filter, 0, 'latest');
-```
-
-No database is involved — the blockchain event log is the audit trail.
+### Public Verification Portal
+- Wallet-free — JsonRpcProvider
+- 🛡️ Animated green shield for VALID / 🚫 Red shake for REVOKED
+- Auto-verification from URL `?hash=0x...` — QR scan triggers immediately
+- Print / Save PDF
 
 ---
 
-## 7. Technology Stack
+## 7. The Graph Subgraph
+
+**GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1756477/certiverf/v0.0.1`
+
+Indexed entities: `RegistrationRequested`, `RegistrationApproved`, `CertificateIssued`, `CertificateRevoked`
+
+**Example query:**
+```graphql
+{
+  certificateIssueds(
+    where: { issuer: "0x44f586b4991b622fc44b31225aae0b85415efb6e" }
+    orderBy: issuedAt orderDirection: desc
+  ) { metaHash studentName studentId programme issuedAt }
+}
+```
+
+**Redeploy:**
+```bash
+cd certiverf && graph auth --studio YOUR_KEY && npm run deploy
+```
+
+---
+
+## 8. Technology Stack
 
 | Technology | Version | Role |
 |---|---|---|
 | Solidity | `^0.8.20` | Smart contract language |
 | Polygon Amoy Testnet | Chain ID: 80002 | Deployment blockchain |
-| Remix IDE | 2.5.1 | Development and deployment environment |
+| Remix IDE | 2.5.1 | Development and deployment |
 | ethers.js | v6 (CDN) | Frontend blockchain library |
-| Alchemy | Free tier | Dedicated RPC endpoint for Polygon Amoy |
+| Alchemy | Free tier | Dedicated RPC endpoint |
 | MetaMask | Browser extension | Transaction signing wallet |
 | IPFS via Pinata | — | Off-chain certificate document storage |
-| Sourcify | Decentralised | Smart contract source code verification |
+| Sourcify | Decentralised | Smart contract source verification |
 | Web Crypto API | Browser native | SHA-256 PDF fingerprinting |
+| The Graph Protocol | v0.0.1 | Decentralised blockchain event indexing |
 | GitHub Pages | — | Frontend hosting |
 
 ---
 
-## 8. Repository Structure
+## 9. Repository Structure
 
 ```
 certiVerf/
-├── index.html                    # CertiVerf multi-portal frontend
+├── index.html                      # Portal HTML structure
+├── scripts.js                      # Portal JavaScript logic
+├── styles.css                      # Portal styles (Nigerian green/gold)
 ├── contracts/
-│   ├── InstitutionRegistry.sol   # Governance contract
-│   └── CertificateRegistry.sol   # Certificate lifecycle contract
+│   ├── InstitutionRegistry.sol     # Governance contract
+│   └── CertificateRegistry.sol    # Certificate lifecycle contract
+├── certiverf/                      # The Graph subgraph
+│   ├── schema.graphql              # Entity definitions
+│   ├── subgraph.yaml               # Subgraph manifest
+│   └── src/                        # Mapping handlers
 ├── diagrams/
-│   ├── use_case_diagram.html     # UML Use Case Diagram
-│   ├── sequence_issuance.html    # Sequence Diagram: Certificate Issuance
-│   └── sequence_verification.html # Sequence Diagram: Verification
-└── README.md                     # This file
+│   ├── use_case_diagram.html
+│   ├── sequence_issuance.html
+│   └── sequence_verification.html
+└── README.md
 ```
 
 ---
 
-## 9. Setup and Deployment Guide
+## 10. Setup and Deployment Guide
 
 ### Prerequisites
+- MetaMask installed · Polygon Amoy added (Chain ID: 80002)
+- Test POL from [faucet.polygon.technology](https://faucet.polygon.technology)
+- Alchemy free account for dedicated RPC
 
-- [MetaMask](https://metamask.io) browser extension installed
-- Polygon Amoy Testnet added to MetaMask (Chain ID: 80002)
-- Test POL tokens from [faucet.polygon.technology](https://faucet.polygon.technology)
-- [Alchemy](https://alchemy.com) free account for a dedicated RPC URL
+### Gas Settings (always use these)
+MetaMask Advanced: Priority Fee = **65 Gwei**, Max Fee = **70 Gwei**  
+Gas Limit: **300,000** for most functions · **500,000** for `issueCertificate`
 
-### Step 1 — Add Polygon Amoy to MetaMask
+### Load Existing Contracts in Remix
+1. Open `InstitutionRegistry.sol` → Compile → **Add Contract** → paste `0x5416e493590141D710F367afA994F97A58116834`
+2. Open `CertificateRegistry.sol` → Compile → **Add Contract** → paste `0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5`
 
-Go to [faucet.polygon.technology](https://faucet.polygon.technology) and click **Add Chain to Wallet**. MetaMask will add Amoy automatically.
+> **CRITICAL:** Never replay saved Remix scenarios with MetaMask/Injected Provider selected — this deploys new contracts on-chain and spends real POL. Always switch to Remix VM before replaying scenarios.
 
-Or add manually:
-```
-Network Name:  Polygon Amoy Testnet
-RPC URL:       https://polygon-amoy.g.alchemy.com/v2/YOUR_KEY
-Chain ID:      80002
-Currency:      POL
-Explorer:      https://amoy.polygonscan.com
-```
-
-### Step 2 — Get Test POL
-
-Visit [faucet.polygon.technology](https://faucet.polygon.technology), verify with GitHub or X, paste your wallet address and claim. You need approximately **0.05 POL** for both contract deployments.
-
-> **Important:** Public RPC endpoints (rpc-amoy.polygon.technology) are unreliable for deployment. Use a dedicated Alchemy key. Create a free account at alchemy.com, create an app on Polygon PoS (Amoy network), copy the HTTPS endpoint and add it to MetaMask.
-
-### Step 3 — Deploy Contracts (if redeploying)
-
-Open [remix.ethereum.org](https://remix.ethereum.org):
-
-1. Upload both `.sol` files from the `contracts/` folder
-2. Compile each with Solidity `0.8.20` and optimizer enabled
-3. In Deploy & Run → Environment → select **Injected Provider - MetaMask**
-4. Deploy `InstitutionRegistry.sol` first → copy its address
-5. Deploy `CertificateRegistry.sol` → paste InstitutionRegistry address in `_registryAddress` field
-
-> **Note:** Both contracts are already deployed and verified. You do not need to redeploy to use the system.
-
-### Step 4 — Configure Frontend
-
-If you redeploy, update these two constants in `index.html`:
-
-```javascript
-const REGISTRY_ADDR = "0x[your InstitutionRegistry address]";
-const CERT_ADDR     = "0x[your CertificateRegistry address]";
-const RPC_URL       = "https://polygon-amoy.g.alchemy.com/v2/YOUR_KEY";
-```
-
-### Step 5 — Deploy Frontend to GitHub Pages
-
+### Deploy to GitHub Pages
 ```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/certiVerf.git
-git push -u origin master
+git add . && git commit -m "deploy" && git push
 ```
-
-Then: GitHub repo → Settings → Pages → Source: **master** branch → Save.
-
-Live at: `https://YOUR_USERNAME.github.io/certiVerf/`
-
-> **Branch naming:** Git initialised locally with `git init` defaults to `master`. GitHub defaults to `main`. If you get a push rejection, run `git pull origin main --allow-unrelated-histories` then `git checkout --ours index.html && git add . && git commit -m "merge" && git push`.
+GitHub repo → Settings → Pages → Source: main branch → Save.
 
 ---
 
-## 10. How to Use Each Portal
+## 11. How to Use Each Portal
 
-### NUC Admin Portal
+### Landing Page
+Open the portal. Click your role card. On refresh, your last portal opens automatically. Use **Change Role** in the header to switch roles.
 
-1. Connect the wallet that deployed `InstitutionRegistry.sol`
-2. Navigate to **NUC Admin** tab
-3. Click **Refresh** to load pending institution applications from blockchain events
-4. Review each application — name, acronym, website, wallet address
-5. Click **Approve** or **Reject** — each triggers an on-chain transaction
-6. Use the lookup tool to check any wallet's registration status
+### NUC Admin
+Connect deployer wallet → Pending Applications auto-loads → Approve/Reject → view Registered Institutions and Statistics.
 
-### Institution Portal
+### Institution — Registration
+Connect institution wallet → fill Name, Acronym, Website → Submit → wait for NUC approval.
 
-**If not registered:**
-1. Connect your institution wallet
-2. Fill in institution name, acronym, and website
-3. Click **Submit Registration to NUC** — this creates a pending request on-chain
-4. Wait for the NUC Admin to approve your request
+### Institution — Issuance
+Upload PDF (SHA-256 auto-computed) → upload same PDF to Pinata → paste CID → fill student details → Issue Certificate → copy metaHash + QR code.
 
-**If registered:**
-1. Fill in the graduate's details — name, student ID, programme, classification, year, email
-2. Upload the certificate PDF — SHA-256 is computed automatically in the browser
-3. Paste the IPFS CID from Pinata (upload PDF to Pinata first)
-4. Click **Issue Certificate on Blockchain**
-5. Copy the generated metaHash and share it with the graduate
-6. The QR code encodes a direct verification URL — print it on the physical certificate
-
-**Revocation:**
-1. Paste the certificate metaHash
-2. Enter a mandatory reason for revocation
-3. Click **Revoke Certificate** — reason and timestamp stored permanently on-chain
-
-### Public Verification Portal
-
-1. Navigate to **Verify Certificate** tab — no wallet needed
-2. Paste the certificate metaHash (or scan the certificate QR code)
-3. Click **Verify** — result returns from blockchain in under 2 seconds
-4. **VALID** certificates show green animated shield with full details
-5. **REVOKED** certificates show red icon with revocation reason and date
-6. Click **Print / Save PDF** to save the verification result
+### Public Verification
+Open portal → click Verify Certificate → paste metaHash or scan QR → result in under 2 seconds.
 
 ---
 
-## 11. Test Scenarios and Results
-
-All eight scenarios were tested on Remix VM (Cancun). All passed.
+## 12. Test Scenarios and Results
 
 | Test | Scenario | Result |
 |---|---|---|
-| T-01 | Institution submits registration request | ✓ RegistrationRequested event emitted |
-| T-02 | Duplicate registration attempt | ✓ Reverted: "already pending" |
-| T-03 | NUC Admin approves institution | ✓ RegistrationApproved event emitted |
-| T-04 | Institution issues certificate | ✓ metaHash `0x0ffdf8...30dba` generated on-chain |
+| T-01 | Institution registration request | ✓ RegistrationRequested event emitted |
+| T-02 | Duplicate registration | ✓ Reverted: "already pending" |
+| T-03 | NUC Admin approves | ✓ RegistrationApproved event emitted |
+| T-04 | Certificate issuance | ✓ metaHash `0x0ffdf8...30dba` generated on-chain |
 | T-05 | Unregistered wallet attempts issuance | ✓ Reverted: "not a registered institution" |
-| T-06 | Public wallet verifies valid certificate | ✓ Full Certificate struct returned, isValid: true |
-| T-07 | Institution revokes certificate | ✓ CertificateRevoked event with reason + timestamp |
-| T-08 | Verifier checks revoked certificate | ✓ isValid: false, revokeReason and revokedAt returned |
+| T-06 | Public verification of valid certificate | ✓ Full struct returned, isValid: true |
+| T-07 | Certificate revocation | ✓ CertificateRevoked event with reason + timestamp |
+| T-08 | Verification of revoked certificate | ✓ isValid: false, revokeReason returned |
 
-### Performance (Polygon Amoy Testnet)
+### Performance
 
 | Metric | Result | Target |
 |---|---|---|
-| Gas — InstitutionRegistry deploy | 0.0334998 POL | < 0.05 POL |
 | Gas — issueCertificate | 398,016 units | < 0.01 POL |
 | Gas — verifyCertificate | FREE (view) | FREE |
 | Verification response time | < 2 seconds | < 5 seconds |
 | Fraud detection rate | 100% (3/3) | 100% |
+| ShikkhaChain comparison | ~1,289,600 gas | CertiVerf is ~3× more efficient |
 
 ---
 
-## 12. Known Issues and Learnings
+## 13. Known Issues and Learnings
 
-### EVM Stack Too Deep Error
+### EVM Stack Too Deep
+**Problem:** 8 parameters exceeded the EVM's 16-slot stack limit.  
+**Solution:** `CertificateInput` struct — one memory reference, one stack slot. Also reduced gas ~70%.
 
-**Problem:** The first version of `issueCertificate()` had 8 individual parameters plus local variables, exceeding the EVM's 16-slot stack limit.
+### Alchemy eth_getLogs Block Range Limit
+**Problem:** Alchemy free tier limits `eth_getLogs` to 10 blocks — prevented historical event queries.  
+**Solution:** Integrated The Graph Protocol. All event queries now use GraphQL with no block range restrictions.
 
-**Solution:** Grouped all 8 inputs into a `CertificateInput` struct. The struct passes as a single memory reference — one stack slot.
+### Accidental Contract Redeployments
+**Problem:** Replaying Remix scenarios with MetaMask selected deploys new contracts on-chain.  
+**Solution:** Always switch to Remix VM before replaying. Use Add Contract (not Deploy) to load existing contracts.
 
-```solidity
-// BEFORE (caused stack too deep)
-function issueCertificate(
-    string memory _studentName,
-    string memory _studentId,
-    // ... 6 more parameters
-)
+### Gas Price Below Minimum
+**Problem:** Transactions failed with `gas tip cap below minimum`.  
+**Solution:** All write functions include explicit gas overrides (65 Gwei priority, 70 Gwei max). `issueCertificate` uses 500,000 gas limit (actual cost: 398,016).
 
-// AFTER (resolved)
-function issueCertificate(CertificateInput memory _input)
-```
-
-This also reduced gas consumption significantly.
-
----
-
-### Polygon Amoy RPC Unreliability
-
-**Problem:** Public RPC endpoints (`rpc-amoy.polygon.technology`, `drpc.org`, `ankr`) failed repeatedly during deployment with the error `_context7.t3.error.indexOf is not a function` — a Remix 2.5.1 bug triggered by unreliable RPC responses.
-
-**Solution:** Create a dedicated Alchemy account and use the private HTTPS endpoint. Public endpoints are shared across thousands of developers and unreliable for testnet deployments.
+### master vs main Branch
+**Problem:** Local `git init` creates `master`; GitHub defaults to `main`.  
+**Solution:** `git branch -m master main` then pull with `--allow-unrelated-histories`.
 
 ---
 
-### MetaMask Branch vs GitHub Branch
+## 14. How This Differs from Existing Systems
 
-**Problem:** `git init` locally creates a `master` branch. GitHub's default is `main`. This causes push rejection: `error: src refspec main does not match any`.
-
-**Solution:** Either push to `master` directly (`git push -u origin master`) or rename the branch before pushing:
-```bash
-git branch -m master main
-git pull origin main --allow-unrelated-histories
-git checkout --ours index.html
-git add . && git commit -m "merge" && git push -u origin main
-```
-
----
-
-### Goerli Testnet Deprecated
-
-ShikkhaChain (Farabi et al., 2025) deployed on Goerli Ethereum testnet, which the Ethereum Foundation deprecated in 2023. This system uses **Polygon Amoy** — the current official Polygon testnet replacing the deprecated Mumbai network.
-
----
-
-### viaIR Compiler Flag
-
-**Problem:** Remix's `remix.config.json` does not accept `viaIR: true` directly in the settings object — it raises "Unknown key viaIR".
-
-**Solution:** The `CertificateInput` struct pattern eliminates the need for `viaIR` entirely. Struct inputs count as one stack slot regardless of how many fields they contain.
-
----
-
-### Institution Name Fraud Vector
-
-**Problem (in CertiQ reference implementation):** Institution name is a free-text input, allowing any registered institution to issue a certificate claiming to be from a different university.
-
-**Solution:** Derive `institutionName` from `InstitutionRegistry.getInstitution(msg.sender)` inside the contract at issuance time. The institution cannot supply this value.
-
----
-
-## 13. How This Differs from Existing Systems
-
-| Feature | Verifi-Chain (2023) | ShikkhaChain (2025) | CertiQ (n.d.) | **CertiVerf (This System)** |
+| Feature | Verifi-Chain (2023) | ShikkhaChain (2025) | CertiQ (n.d.) | **CertiVerf** |
 |---|---|---|---|---|
-| Dual-hash (metadata + document) | ✗ | ✗ | ✗ | **✓** |
+| Dual-hash: metaHash + docHash | ✗ | ✗ | ✗ | **✓** |
 | PDF SHA-256 browser fingerprint | ✗ | ✗ | ✗ | **✓** |
 | No post-issuance modification | ~ | ~ | ✗ | **✓** |
 | Institution name from on-chain registry | ✗ | ✗ | ✗ | **✓** |
 | Wallet-free public verification | ✗ | ~ | ~ | **✓** |
 | Two-contract architecture | ✗ | ✗ | ✗ | **✓** |
-| QR code auto-verification (URL-based) | ✗ | ~ (future work) | ~ | **✓** |
-| Certificate history from events | ✗ | ~ | ✗ | **✓** |
+| QR auto-verification (URL, no wallet) | ✗ | ~ (future work) | ~ | **✓** |
+| The Graph decentralised event indexing | ✗ | ✗ | ✗ | **✓** |
+| Certificate history (unlimited range) | ✗ | ✗ | ✗ | **✓** |
+| Certificate statistics per institution | ✗ | ✗ | ✗ | **✓** |
+| Role selection landing page | ✗ | ✗ | ✗ | **✓** |
 | Nigerian regulatory context (NUC/NCVS) | ✗ | ✗ | ✗ | **✓** |
 | Positioned against an operational system | ✗ | ✗ | ✗ | **✓** |
 
-Gas cost comparison: ShikkhaChain reports ~1,289,600 gas units per issuance on Goerli (Farabi et al., 2025, p.4). CertiVerf incurred 398,016 units on Polygon Amoy — approximately 3× more efficient.
-
 ---
 
-## 14. References
+## 15. References
 
-- Akuma, C. F., Garba, E. J., Usman, M., & Kadams, A. A. (2024). Blockchain-enabled conceptual framework for enhancing academic transcript issuance and authentication in the Nigerian educational system. *International Journal of Development Mathematics*, *1*(2), 227–236. https://doi.org/10.62054/ijdm/0102.19
+- Akuma, C. F., Garba, E. J., Usman, M., & Kadams, A. A. (2024). *International Journal of Development Mathematics*, *1*(2), 227–236. https://doi.org/10.62054/ijdm/0102.19
 
-- Effiong, M. E. (2020). *A framework for the adoption of blockchain technology in academic certificate-verification systems: A case study of Nigeria* [Master's thesis, Tallinn University of Technology]. https://digikogu.taltech.ee/et/Download/1fe667ff-d131-432b-b758-061b9d4348d1
+- Effiong, M. E. (2020). [Master's thesis, Tallinn University of Technology]. https://digikogu.taltech.ee/et/Download/1fe667ff-d131-432b-b758-061b9d4348d1
 
-- Farabi, A., Khandaker, I., Ahsan, J., Shanto, I. K., Jahan, N., & Khan, M. J. (2025). ShikkhaChain: A blockchain-powered academic credential verification system for Bangladesh. *arXiv preprint arXiv:2508.05334*. https://arxiv.org/abs/2508.05334
+- Farabi, A., Khandaker, I., Ahsan, J., Shanto, I. K., Jahan, N., & Khan, M. J. (2025). *arXiv preprint arXiv:2508.05334*. https://arxiv.org/abs/2508.05334
 
-- Federal Republic of Nigeria. (2025). *National Education Repository and Databank (NERD) Regulation, 2025, Official Gazette No. 200*. Federal Government Press.
+- Federal Republic of Nigeria. (2025). *NERD Regulation, Official Gazette No. 200*. Federal Government Press.
 
-- Hevner, A. R., March, S. T., Park, J., & Ram, S. (2004). Design science in information systems research. *MIS Quarterly*, *28*(1), 75–106. https://doi.org/10.2307/25148625
+- Hevner, A. R., March, S. T., Park, J., & Ram, S. (2004). *MIS Quarterly*, *28*(1), 75–106. https://doi.org/10.2307/25148625
 
-- Marikkal, A. (n.d.). *CertiQ* [Source code]. GitHub. https://github.com/AdithyanMarikkal/CertiQ
+- Marikkal, A. (n.d.). *CertiQ* [Source code]. https://github.com/AdithyanMarikkal/CertiQ
 
-- Ogbonnia, O. O., & Chiamaka, E. B. (2022). Centralized online transcript verification system for Nigeria tertiary institutions: A propositional model. *International Journal of Advances in Engineering and Management*, *4*(11), 264–270. https://doi.org/10.35629/5252-0411264270
+- Ogbonnia, O. O., & Chiamaka, E. B. (2022). *International Journal of Advances in Engineering and Management*, *4*(11), 264–270. https://doi.org/10.35629/5252-0411264270
 
-- Peffers, K., Tuunanen, T., Rothenberger, M. A., & Chatterjee, S. (2007). A design science research methodology for information systems research. *Journal of Management Information Systems*, *24*(3), 45–77.
+- Peffers, K., Tuunanen, T., Rothenberger, M. A., & Chatterjee, S. (2007). *Journal of Management Information Systems*, *24*(3), 45–77.
 
 - Polygon Technology. (2024). *Introducing the Amoy testnet for Polygon PoS*. https://polygon.technology/blog/introducing-the-amoy-testnet-for-polygon-pos
 
-- Rahman, T., Mouno, S. I., Raatul, A. M., Al Azad, A. K., & Mansoor, N. (2023). Verifi-Chain: A credentials verifier using blockchain and IPFS. In *Inventive Communication and Computational Technologies* (pp. 355–366). Springer. https://doi.org/10.1007/978-981-99-5166-6_24
+- Rahman, T., Mouno, S. I., Raatul, A. M., Al Azad, A. K., & Mansoor, N. (2023). In *Inventive Communication and Computational Technologies* (pp. 355–366). Springer. https://doi.org/10.1007/978-981-99-5166-6_24
 
-- Rustemi, A., Dalipi, F., Atanasovski, V., & Risteski, A. (2023). A systematic literature review on blockchain-based systems for academic certificate verification. *IEEE Access*, *11*, 64,679–64,696. https://doi.org/10.1109/ACCESS.2023.3289598
+- Rustemi, A., Dalipi, F., Atanasovski, V., & Risteski, A. (2023). *IEEE Access*, *11*, 64,679–64,696. https://doi.org/10.1109/ACCESS.2023.3289598
+
+- Tal, Y., Ramirez, B., & Pohlmann, J. (2018). *The Graph: A decentralized query protocol for blockchain data* [White paper]. https://github.com/graphprotocol/research/blob/master/papers/whitepaper/the-graph-whitepaper.pdf
+
+- The Graph Foundation. (2024). *About The Graph*. https://thegraph.com/docs/en/about/
 
 ---
 
 ## Licence
 
-This project is developed as an academic thesis prototype at the National Open University of Nigeria. It is made publicly available for research and educational purposes.
+This project is developed as an academic thesis prototype at the National Open University of Nigeria and is made publicly available for research and educational purposes.
 
 ---
 
-*CertiVerf · Dawodu Fatai Olalekan · NOU234249189 · MSc CIT899 · NOUN Lagos Mainland I · 2025*
+*CertiVerf · Dawodu Fatai Olalekan · NOU234249189 · MSc CIT899 · NOUN Lagos Mainland I · 2026*
