@@ -5,11 +5,109 @@ const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/3RE7F8bPJ2MofC94L2tdP";
 const AMOY_ID = 80002;
 const PAGE_URL = window.location.href.split("?")[0];
 
-const REG_ABI = [{ "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_name", "type": "string" }, { "internalType": "string", "name": "_acronym", "type": "string" }, { "internalType": "string", "name": "_website", "type": "string" }], "name": "requestRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "approveRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "rejectRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "isRegistered", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }, { "internalType": "uint256", "name": "registrationTime", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getPendingInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }], "stateMutability": "view", "type": "function" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "string", "name": "acronym", "type": "string" }], "name": "RegistrationRequested", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "name": "RegistrationApproved", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }], "name": "RegistrationRejected", "type": "event" }];
+const REG_ABI = [
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "stateMutability": "view",
+        "type": "function"
+    },
 
-const CERT_ABI = [{ "inputs": [{ "components": [{ "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }], "internalType": "struct CertificateRegistry.CertificateInput", "name": "_input", "type": "tuple" }], "name": "issueCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }, { "internalType": "string", "name": "_reason", "type": "string" }], "name": "revokeCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }], "name": "verifyCertificate", "outputs": [{ "components": [{ "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }, { "internalType": "string", "name": "institutionName", "type": "string" }, { "internalType": "string", "name": "institutionAcronym", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }, { "internalType": "address", "name": "issuer", "type": "address" }, { "internalType": "bool", "name": "isValid", "type": "bool" }, { "internalType": "string", "name": "revokeReason", "type": "string" }, { "internalType": "uint256", "name": "revokedAt", "type": "uint256" }], "internalType": "struct CertificateRegistry.Certificate", "name": "", "type": "tuple" }], "stateMutability": "view", "type": "function" }, {
-    "anonymous": false, "inputs": [{ "indexed": true, "internalType": "bytes32", "name": "metaHash", "type": "bytes32" }, { "indexed": true, "internalType": "address", "name": "issuer", "type": "address" }, { "indexed": false, "internalType": "string", "name": "institutionName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentId", "type": "string" }, { "indexed": false, "internalType": "string", "name": "programme", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "issuedAt", "type": "uint256" }], "name": "CertificateIssued", "type": "event"
-}];
+    {
+        "inputs":
+            [
+                { "internalType": "string", "name": "_name", "type": "string" },
+                { "internalType": "string", "name": "_acronym", "type": "string" },
+                { "internalType": "string", "name": "_website", "type": "string" }
+            ],
+        "name": "requestRegistration",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }],
+        "name": "approveRegistration",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "rejectRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "isRegistered", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }, { "internalType": "uint256", "name": "registrationTime", "type": "uint256" }], "stateMutability": "view", "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "address", "name": "_wallet", "type": "address" }], "name": "getPendingInstitution", "outputs": [{ "internalType": "string", "name": "name", "type": "string" }, { "internalType": "string", "name": "acronym", "type": "string" }, { "internalType": "string", "name": "website", "type": "string" }], "stateMutability": "view", "type": "function"
+    },
+    {
+        "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "string", "name": "acronym", "type": "string" }], "name": "RegistrationRequested", "type": "event"
+    },
+    {
+        "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }, { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "name": "RegistrationApproved", "type": "event"
+    },
+    {
+        "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "wallet", "type": "address" }, { "indexed": false, "internalType": "string", "name": "name", "type": "string" }], "name": "RegistrationRejected", "type": "event"
+    }
+];
+
+const CERT_ABI = [
+    {
+        "inputs": [{ "components": [{ "internalType": "string", "name": "studentName", "type": "string" }, { "internalType": "string", "name": "studentId", "type": "string" }, { "internalType": "string", "name": "programme", "type": "string" }, { "internalType": "string", "name": "degreeClass", "type": "string" }, { "internalType": "uint256", "name": "completionYear", "type": "uint256" }, { "internalType": "string", "name": "email", "type": "string" }, { "internalType": "bytes32", "name": "docHash", "type": "bytes32" }, { "internalType": "string", "name": "ipfsCid", "type": "string" }], "internalType": "struct CertificateRegistry.CertificateInput", "name": "_input", "type": "tuple" }], "name": "issueCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }, { "internalType": "string", "name": "_reason", "type": "string" }], "name": "revokeCertificate", "outputs": [], "stateMutability": "nonpayable", "type": "function"
+    },
+    {
+        "inputs": [{ "internalType": "bytes32", "name": "_metaHash", "type": "bytes32" }],
+        "name": "verifyCertificate",
+        "outputs": [
+            {
+                "components": 
+                    [
+                        { "internalType": "bytes32", "name": "metaHash", "type": "bytes32" },
+                        { "internalType": "bytes32", "name": "docHash", "type": "bytes32" },
+                        { "internalType": "string", "name": "ipfsCid", "type": "string" },
+                        { "internalType": "string", "name": "institutionName", "type": "string" },
+                        { "internalType": "string", "name": "institutionAcronym", "type": "string" },
+                        { "internalType": "string", "name": "programme", "type": "string" },
+                        { "internalType": "string", "name": "degreeClass", "type": "string" },
+                        { "internalType": "string", "name": "studentName", "type": "string" },
+                        { "internalType": "string", "name": "studentId", "type": "string" },
+                        { "internalType": "string", "name": "email", "type": "string" },
+                        { "internalType": "uint256", "name": "completionYear", "type": "uint256" },
+                        { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }, 
+                        { "internalType": "address", "name": "issuer", "type": "address" }, 
+                        { "internalType": "bool", "name": "isValid", "type": "bool" }, 
+                        { "internalType": "string", "name": "revokeReason", "type": "string" },
+                        { "internalType": "uint256", "name": "revokedAt", "type": "uint256" }
+                    ], 
+                "internalType": "struct CertificateRegistry.Certificate", 
+                "name": "", 
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view", 
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            { "indexed": true, "internalType": "bytes32", "name": "metaHash", "type": "bytes32" },
+            { "indexed": true, "internalType": "address", "name": "issuer", "type": "address" },
+            { "indexed": false, "internalType": "string", "name": "institutionName", "type": "string" }, { "indexed": false, "internalType": "string", "name": "studentName", "type": "string" },
+            { "indexed": false, "internalType": "string", "name": "studentId", "type": "string" },
+            { "indexed": false, "internalType": "string", "name": "programme", "type": "string" },
+            { "indexed": false, "internalType": "uint256", "name": "issuedAt", "type": "uint256" }
+        ],
+        "name": "CertificateIssued", "type": "event"
+    }
+];
 
 let provider, signer, userAddress, isOwner = false, isReg = false, instData = null, computedDocHash = null;
 
@@ -93,12 +191,11 @@ window.addEventListener("load", async () => {
             document.getElementById("connectBtn").textContent = "Connected";
             await detectRole();
         }
-
-        // Restore active tab instantly before anything renders
-        const savedTab = sessionStorage.getItem("activeTab");
-        if (savedTab) switchTab(savedTab);
-        document.body.classList.remove("tab-loading");
     }
+    // Restore active tab instantly before anything renders
+    const savedTab = sessionStorage.getItem("activeTab");
+    if (savedTab) switchTab(savedTab);
+    document.body.classList.remove("tab-loading");
 });
 
 async function connectWallet() {
@@ -233,55 +330,100 @@ async function loadRegistered() {
 }
 
 function showInstitution(isPend = false) {
-    document.getElementById("instGate").style.display = "none"; document.getElementById("instContent").style.display = "block";
-    document.getElementById("adminGate").style.display = "none"; document.getElementById("adminDenied").style.display = "block";
+    document.getElementById("instGate").style.display = "none";
+    document.getElementById("instContent").style.display = "block";
+    document.getElementById("adminGate").style.display = "none";
+    document.getElementById("adminDenied").style.display = "block";
     const t = document.getElementById("instTitle"), s = document.getElementById("instSub"), badge = document.getElementById("instStatBadge"), desc = document.getElementById("instStatDesc"), body = document.getElementById("instStatBody"), steps = document.getElementById("instSteps"), regC = document.getElementById("regCard"), issC = document.getElementById("issueCard"), revC = document.getElementById("revokeCard"), histC = document.getElementById("histCard");
     if (isReg && instData) {
-        t.textContent = instData[0]; s.textContent = "Registered institution — issue and manage certificates";
+        t.textContent = instData[0];
+        s.textContent = "Registered institution — issue and manage certificates";
         badge.className = "badge b-green"; badge.textContent = "✓ Approved by NUC"; desc.textContent = "Your institution is approved and active";
-        body.innerHTML = `<p style="font-size:.875rem;color:var(--n700)"><strong>${instData[0]}</strong> (${instData[1]}) · ${instData[2]}<br/><span style="color:var(--n500)">Registered on ${fmtDate(instData[3])}</span></p>`;
+        body.innerHTML = `<p style="font-size:.875rem;
+        color:var(--n700)"><strong>${instData[0]}</strong> (${instData[1]}) · ${instData[2]}<br/><span style="color:var(--n500)">Registered on ${fmtDate(instData[3])}</span></p>`;
         steps.innerHTML = `<div class="step"><span class="step-num">1</span><span class="step-text">Fill in graduate details</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">2</span><span class="step-text">Upload PDF to compute SHA-256 fingerprint</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">3</span><span class="step-text">Issue on blockchain — receive hash + QR code</span></div>`;
-        regC.style.display = "none"; issC.style.display = "block"; revC.style.display = "block"; histC.style.display = "block";
+        regC.style.display = "none";
+        issC.style.display = "block";
+        revC.style.display = "block";
+        histC.style.display = "block";
     } else if (isPend) {
-        t.textContent = "Registration Pending"; s.textContent = "Your request awaits NUC review";
-        badge.className = "badge b-amber"; badge.textContent = "⏳ Pending"; desc.textContent = "Awaiting NUC approval";
-        body.innerHTML = `<p style="font-size:.875rem;color:var(--n500)">Your registration has been submitted. You will be able to issue certificates once the NUC admin approves your request.</p>`;
-        steps.style.display = "none"; regC.style.display = "none"; issC.style.display = "none"; revC.style.display = "none"; histC.style.display = "none";
+        t.textContent = "Registration Pending";
+        s.textContent = "Your request awaits NUC review";
+        badge.className = "badge b-amber";
+        badge.textContent = "⏳ Pending";
+        desc.textContent = "Awaiting NUC approval";
+        body.innerHTML = `<p style="font-size:.875rem;
+        color:var(--n500)">Your registration has been submitted. You will be able to issue certificates once the NUC admin approves your request.</p>`;
+        steps.style.display = "none";
+        regC.style.display = "none";
+        issC.style.display = "none";
+        revC.style.display = "none";
+        histC.style.display = "none";
     } else {
-        t.textContent = "Register Your Institution"; s.textContent = "Submit a registration request to the NUC. Once approved, you can issue blockchain certificates.";
-        badge.className = "badge b-gray"; badge.textContent = "Not Registered"; desc.textContent = "Submit a registration request below";
-        body.innerHTML = `<p style="font-size:.875rem;color:var(--n500)">Complete the form below and submit your registration to NUC for approval.</p>`;
+        t.textContent = "Register Your Institution";
+        s.textContent = "Submit a registration request to the NUC. Once approved, you can issue blockchain certificates.";
+        badge.className = "badge b-gray";
+        badge.textContent = "Not Registered";
+        desc.textContent = "Submit a registration request below";
+        body.innerHTML = `<p style="font-size:.875rem;
+        color:var(--n500)">Complete the form below and submit your registration to NUC for approval.</p>`;
         steps.innerHTML = `<div class="step"><span class="step-num">1</span><span class="step-text">Fill in your institution details</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">2</span><span class="step-text">Submit request to NUC Admin</span></div><span class="step-arrow">→</span><div class="step"><span class="step-num">3</span><span class="step-text">Once approved — issue certificates</span></div>`;
-        regC.style.display = "block"; issC.style.display = "none"; revC.style.display = "none"; histC.style.display = "none";
+        regC.style.display = "block";
+        issC.style.display = "none";
+        revC.style.display = "none";
+        histC.style.display = "none";
     }
 }
 
 async function doRegister() {
     const name = document.getElementById("regName").value.trim(), acr = document.getElementById("regAcronym").value.trim(), web = document.getElementById("regWebsite").value.trim();
-    if (!name || !acr) { setSt("regSt", "error", "Institution name and acronym are required."); return }
-    const btn = document.getElementById("regBtn"); btn.disabled = true; setSt("regSt", "pending", "Submitting registration to blockchain...");
+    if (!name || !acr) {
+        setSt("regSt", "error", "Institution name and acronym are required.");
+        return
+    }
+    const btn = document.getElementById("regBtn");
+    btn.disabled = true;
+    setSt("regSt", "pending", "Submitting registration to blockchain...");
     try {
-        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer); const tx = await reg.requestRegistration(name, acr, web, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 }); setSt("regSt", "pending", "Transaction submitted — awaiting confirmation..."); await tx.wait();// Store in localStorage so NUC Admin can see it automatically
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
+        const tx = await reg.requestRegistration(name, acr, web, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        setSt("regSt", "pending", "Transaction submitted — awaiting confirmation...");
+        await tx.wait();
+        // Store in localStorage so NUC Admin can see it automatically
         const lsPending = JSON.parse(localStorage.getItem('cv_pending') || '[]');
         lsPending.push({ wallet: userAddress, name: name, acronym: acr, website: web, ts: Date.now() });
         localStorage.setItem('cv_pending', JSON.stringify(lsPending));
-        setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress); await detectRole()
+        setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress);
+        await detectRole()
     }
     catch (e) { setSt("regSt", "error", e.reason || e.message); btn.disabled = false }
 }
 
 async function onPdf(input) {
-    const file = input.files[0]; if (!file) return;
-    computedDocHash = null; document.getElementById("docHashDiv").style.display = "none";
-    try { const buf = await file.arrayBuffer(); const hb = await crypto.subtle.digest("SHA-256", buf); const arr = Array.from(new Uint8Array(hb)); computedDocHash = "0x" + arr.map(b => b.toString(16).padStart(2, "0")).join(""); document.getElementById("docHashVal").textContent = computedDocHash; document.getElementById("docHashDiv").style.display = "block" }
+    const file = input.files[0];
+    if (!file) return;
+    computedDocHash = null;
+    document.getElementById("docHashDiv").style.display = "none";
+    try {
+        const buf = await file.arrayBuffer();
+        const hb = await crypto.subtle.digest("SHA-256", buf);
+        const arr = Array.from(new Uint8Array(hb));
+        computedDocHash = "0x" + arr.map(b => b.toString(16).padStart(2, "0")).join(""); document.getElementById("docHashVal").textContent = computedDocHash;
+        document.getElementById("docHashDiv").style.display = "block"
+    }
     catch (e) { console.error(e) }
 }
 
 async function doIssue() {
     const name = document.getElementById("stuName").value.trim(), id = document.getElementById("stuId").value.trim(), prog = document.getElementById("stuProg").value.trim(), cls = document.getElementById("stuClass").value, yr = parseInt(document.getElementById("stuYear").value), em = document.getElementById("stuEmail").value.trim(), ipfs = document.getElementById("stuIpfs").value.trim();
-    if (!name || !id || !prog || !cls || !yr) { setSt("issueSt", "error", "Please fill in all required fields."); return }
+    if (!name || !id || !prog || !cls || !yr) {
+        setSt("issueSt", "error", "Please fill in all required fields.");
+        return
+    }
     const dHash = computedDocHash || ethers.zeroPadValue("0x01", 32);
-    const btn = document.getElementById("issueBtn"); btn.disabled = true; document.getElementById("issueResult").style.display = "none"; setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
+    const btn = document.getElementById("issueBtn");
+    btn.disabled = true; document.getElementById("issueResult").style.display = "none";
+    setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
     try {
         const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 }); setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); const receipt = await tx.wait();
         let mHash = ""; for (const log of receipt.logs) { try { const p = cert.interface.parseLog(log); if (p && p.name === "CertificateIssued") { mHash = p.args.metaHash; break } } catch { } }
@@ -318,18 +460,19 @@ async function loadHistory() {
     el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from The Graph...</p></div>`;
     try {
         const query = `{
-      certificateIssueds(
-        where: { issuer: "${userAddress.toLowerCase()}" }
-        orderBy: issuedAt
-        orderDirection: desc
-      ) {
-        metaHash
-        studentName
-        studentId
-        programme
-        issuedAt
-      }
-    }`;
+            certificateIssueds(
+                where: { issuer: "${userAddress.toLowerCase()}" }
+                orderBy: issuedAt
+                orderDirection: desc
+            ) 
+            {
+                metaHash
+                studentName
+                studentId
+                programme
+                issuedAt
+            }
+        }`;
         const res = await fetch(GRAPH_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -343,19 +486,28 @@ async function loadHistory() {
         }
         const rows = events.map((c, i) => `<tr>
       <td>${i + 1}</td>
-      <td><strong>${c.studentName}</strong><br/>
-      <span style="color:var(--n500);font-size:.75rem">${c.studentId}</span></td>
+        <td><strong>${c.studentName}</strong><br/>
+        <span style="color:var(--n500);font-size:.75rem">${c.studentId}</span>
+      </td>
       <td>${c.programme}</td>
       <td>${fmtDate(c.issuedAt)}</td>
-      <td><span class="mono-sm">${c.metaHash.slice(0, 14)}...</span><br/>
-      <button class="copy-btn" style="margin-top:4px"
-        onclick="navigator.clipboard.writeText('${c.metaHash}')">Copy hash</button>
+      <td>
+        <span class="mono-sm">${c.metaHash.slice(0, 14)}...</span><br/>
+        <button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${c.metaHash}')">Copy hash</button>
       </td>
-    </tr>`).join("");
+        </tr>`).join("");
         el.innerHTML = `<table class="hist-tbl">
-      <thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+            <thead>
+                <tr>
+                <th>#</th>
+                <th>Graduate</th>
+                <th>Programme</th>
+                <th>Date Issued</th>
+                <th>Certificate Hash</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
     } catch (e) {
         el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`;
     }
