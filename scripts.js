@@ -113,6 +113,22 @@ if (window.ethereum) {
 window.addEventListener("load", async () => {
 
     // Check if user has already chosen a role — skip landing if so
+    // If URL has a hash parameter (QR scan) — skip landing, verify immediately
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlHash = urlParams.get("hash");
+    if (urlHash) {
+        document.getElementById("landingScreen").style.display = "none";
+        document.body.classList.remove("tab-loading");
+        switchTab("verify");
+        sessionStorage.setItem("selectedRole", "verify");
+        sessionStorage.setItem("activeTab", "verify");
+        document.getElementById("changeRoleBtn").classList.add("show");
+        document.getElementById("verifyHash").value = urlHash;
+        runVerify();
+        return;
+    }
+
+    // Check if user has already chosen a role — skip landing if so
     const selectedRole = sessionStorage.getItem("selectedRole");
     const savedTab = sessionStorage.getItem("activeTab");
 
