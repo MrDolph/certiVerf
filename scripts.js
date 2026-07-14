@@ -172,10 +172,23 @@ window.addEventListener("load", () => {
 
 // Auto-reconnect on page refresh if MetaMask was previously connected
 window.addEventListener("load", async () => {
-    if (window.ethereum) {
+    // Step 1 — restore tab FIRST, synchronously, before any async work
+    const savedTab = sessionStorage.getItem("activeTab");
+    if (savedTab) switchTab(savedTab);
+    document.body.classList.remove("tab-loading");
+
+    // Step 2 — URL hash auto-verify
+    const p = new URLSearchParams(window.location.search);
+    const h = p.get("hash");
+    if (h) {
+        document.getElementById("verifyHash").value = h;
+        runVerify();
+    }
+
+    // Step 3 — auto-reconnect only if user has not explicitly disconnected
+    if (window.ethereum && !sessionStorage.getItem("walletDisconnected")) {
         const accounts = await window.ethereum.request({ method: "eth_accounts" });
         if (accounts.length > 0) {
-            // Wallet already connected — silently reconnect without prompting
             provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
             userAddress = await signer.getAddress();
@@ -195,14 +208,11 @@ window.addEventListener("load", async () => {
             document.getElementById("connectBtn").textContent = "Connected";
             await detectRole();
         }
-        // Restore active tab instantly before anything renders
-        const savedTab = sessionStorage.getItem("activeTab");
-        if (savedTab) switchTab(savedTab);
-        document.body.classList.remove("tab-loading");
     }
 });
 
 async function connectWallet() {
+    sessionStorage.removeItem("walletDisconnected");
     if (!window.ethereum) {
         alert("MetaMask is not installed. Install from metamask.io");
         return
@@ -241,6 +251,7 @@ async function connectWallet() {
 }
 
 function disconnectWallet() {
+    sessionStorage.setItem("walletDisconnected", "true");
     // Reset all state
     provider = null;
     signer = null;
@@ -359,8 +370,8 @@ async function loadRegistered() {
             ${ev.wallet.slice(0, 10)}...${ev.wallet.slice(-6)}</td>
           <td><span class="badge b-green" style="font-size:.65rem">✓ Active</span></td>
         </tr>`;
-            } catch { 
-                continue; 
+            } catch {
+                continue;
             }
         }
         if (!rows) {
@@ -443,8 +454,8 @@ async function doRegister() {
         setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress);
         await detectRole()
     }
-    catch (e) { 
-        setSt("regSt", "error", e.reason || e.message); btn.disabled = false 
+    catch (e) {
+        setSt("regSt", "error", e.reason || e.message); btn.disabled = false
     }
 }
 
@@ -471,33 +482,36 @@ async function doIssue() {
     }
     const dHash = computedDocHash || ethers.zeroPadValue("0x01", 32);
     const btn = document.getElementById("issueBtn");
-    btn.disabled = true; 
+    btn.disabled = true;
     document.getElementById("issueResult").style.display = "none";
     setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
     try {
-        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); 
-        const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 }); 
-        setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); 
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer);
+        const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 });
+        setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation...");
         const receipt = await tx.wait();
-        let mHash = ""; 
-        for (const log of receipt.logs) { try { const p = cert.interface.parseLog(log); 
-            if (p && p.name === "CertificateIssued") 
-                { mHash = p.args.metaHash; break } 
-        } 
-            catch { 
+        let mHash = "";
+        for (const log of receipt.logs) {
+            try {
+                const p = cert.interface.parseLog(log);
+                if (p && p.name === "CertificateIssued") { mHash = p.args.metaHash; break }
+            }
+            catch {
 
-            } 
+            }
         }
         setSt("issueSt", "success", "Certificate issued and permanently stored on the blockchain.");
         document.getElementById("issuedHash").textContent = mHash;
-        if (mHash) { 
-            const link = PAGE_URL + "?hash=" + mHash; 
-            document.getElementById("issueQRImg").src = qrUrl(link); 
-            document.getElementById("issueQR").style.display = "flex" 
+        if (mHash) {
+            const link = PAGE_URL + "?hash=" + mHash;
+            const issueQRImgEl = document.getElementById("issueQRImg");
+            issueQRImgEl.src = qrUrl(link);
+            issueQRImgEl.onerror = () => { document.getElementById("issueQR").style.display = "none"; };
+            document.getElementById("issueQR").style.display = "flex"
         }
         document.getElementById("issueResult").style.display = "block"; btn.disabled = false;
-    } catch (e) { 
-        setSt("issueSt", "error", e.reason || e.message); btn.disabled = false 
+    } catch (e) {
+        setSt("issueSt", "error", e.reason || e.message); btn.disabled = false
     }
 }
 
@@ -761,10 +775,14 @@ function showResult(c, hash) {
     ${!valid ? `<div class="cf full alert"><div class="cf-lbl">Revocation Reason</div><div class="cf-val">${c.revokeReason}</div><div class="cf-lbl" style="margin-top:10px">Revoked On</div><div class="cf-val">${fmtDate(c.revokedAt)}</div></div>` : ""}`;
     if (valid) {
         const link = PAGE_URL + "?hash=" + hash;
-        document.getElementById("qrImg").src = qrUrl(link);
+        const qrImgEl = document.getElementById("qrImg");
+        qrImgEl.src = qrUrl(link);
+        qrImgEl.onerror = () => { document.getElementById("qrSec").style.display = "none"; };
         document.getElementById("qrSec").style.display = "flex"
     }
-    else { document.getElementById("qrSec").style.display = "none" }
+    else {
+        document.getElementById("qrSec").style.display = "none"
+    }
     document.getElementById("resultActs").innerHTML = `<button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button><button class="btn btn-ghost btn-sm" onclick="copyTxt('${hash}')">📋 Copy Hash</button><button class="btn btn-ghost btn-sm" onclick="clearResult()">✕ Clear</button>`;
     document.getElementById("certCard").style.display = "block";
     document.getElementById("certCard").scrollIntoView({ behavior: "smooth" });
