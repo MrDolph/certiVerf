@@ -59,9 +59,8 @@ function clrSt(id) {
 
 function switchTab(n) {
     document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById("pane-" + n).classList.add("active");
-    document.getElementById("tab-" + n).classList.add("active");
+    const pane = document.getElementById("pane-" + n);
+    if (pane) pane.classList.add("active");
     sessionStorage.setItem("activeTab", n);
 }
 
@@ -124,13 +123,13 @@ window.addEventListener("load", async () => {
         document.body.classList.remove("tab-loading");
         document.getElementById("changeRoleBtn").classList.add("show");
     } else {
-        // Show landing screen
+        // Show landing screen explicitly
         document.body.classList.remove("tab-loading");
-        // Show continue option if they have a previous session
+        document.getElementById("landingScreen").style.display = "flex";
         if (savedTab) {
             document.getElementById("landingContinue").style.display = "block";
         }
-        return; // Stop here — wallet reconnect happens after role is chosen
+        return;
     }
 
     // URL hash auto-verify
@@ -226,6 +225,7 @@ function disconnectWallet() {
     document.getElementById("adminContent").style.display = "none";
     document.getElementById("adminDenied").style.display = "none";
     document.getElementById("regInstCard").style.display = "none";
+    document.getElementById("statsCard").style.display = "none";
 }
 
 async function detectRole() {
@@ -293,8 +293,9 @@ async function loadRegistered() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query })
         });
-        const data = await res.json();
-        const events = data.data.registrationApproveds;
+        const jsonReg = await res.json();
+        if (jsonReg.errors) throw new Error(jsonReg.errors[0].message);
+        const events = jsonReg.data ? jsonReg.data.registrationApproveds : [];
         if (!events || !events.length) {
             el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No registered institutions yet.</p></div>`;
             return;
@@ -476,8 +477,9 @@ async function loadHistory() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query })
         });
-        const data = await res.json();
-        const events = data.data.certificateIssueds;
+        const jsonHist = await res.json();
+        if (jsonHist.errors) throw new Error(jsonHist.errors[0].message);
+        const events = jsonHist.data ? jsonHist.data.certificateIssueds : [];
         if (!events || !events.length) {
             el.innerHTML = `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet.</p></div>`;
             return;
@@ -671,18 +673,19 @@ async function loadStats() {
     el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading statistics from The Graph...</p></div>`;
     try {
         const query = `{
-            certificateIssueds { id issuer institutionName }
-            certificateRevokeds: certificateIssueds(where: { isValid: false }) { id }
-            registrationApproveds { id wallet name }
+            certificateIssueds(first: 1000) { id issuer institutionName }
+            registrationApproveds(first: 1000) { id wallet name }
         }`;
         const res = await fetch(GRAPH_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query })
         });
-        const data = await res.json();
-        const issued = data.data.certificateIssueds || [];
-        const approved = data.data.registrationApproveds || [];
+        const json = await res.json();
+        if (json.errors) throw new Error(json.errors[0].message);
+        if (!json.data) throw new Error("No data returned from The Graph");
+        const issued = json.data.certificateIssueds || [];
+        const approved = json.data.registrationApproveds || [];
 
         // Global stats
         const totalIssued = issued.length;
