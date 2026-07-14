@@ -192,19 +192,7 @@ header {
 }
 
 /* NAV */
-nav {
-    background: var(--white);
-    border-bottom: 1px solid var(--n200);
-    display: flex;
-    padding: 0 20px;
-    gap: 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    position: sticky;
-    top: 68px;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
-}
+/* nav removed — landing page handles role selection */
 
 .tab-btn {
     background: none;
@@ -235,9 +223,9 @@ nav {
 
 /* MAIN */
 main {
-    max-width: 900px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 28px 16px 80px
+    padding: 28px 32px 80px
 }
 
 .tab-pane {
@@ -245,7 +233,8 @@ main {
 }
 
 .tab-pane.active {
-    display: block
+    display: block;
+    min-height: calc(100vh - 68px);
 }
 
 /* SECTION HEADER */
@@ -362,6 +351,10 @@ main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px
+}
+@media (min-width: 900px) {
+    .fg { grid-template-columns: 1fr 1fr 1fr; }
+    .fg .full { grid-column: 1 / -1; }
 }
 
 .fg .full {
@@ -1167,7 +1160,7 @@ main {
 .change-role-btn.show { display: block; }
 
 /* Scroll margin fix for sticky header */
-#certCard { scroll-margin-top: 140px; }
+#certCard { scroll-margin-top: 80px; }
 
 @media (max-width: 600px) {
     .landing-cards { grid-template-columns: 1fr; }
