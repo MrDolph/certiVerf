@@ -14,6 +14,46 @@
 
 <body class="tab-loading">
 
+  <!-- LANDING SCREEN -->
+  <div id="landingScreen">
+    <div class="landing-inner">
+      <div class="landing-logo">
+        <div class="lshield">🛡️</div>
+        <h1>CertiVerf</h1>
+        <p class="lsub">Blockchain Certificate Verification System</p>
+        <span class="lbadge">NOUN MSc CIT899 · Polygon Amoy Testnet</span>
+      </div>
+      <div class="landing-prompt">How would you like to proceed?</div>
+      <div class="landing-cards">
+        <div class="lcard" onclick="enterPortal('verify')">
+          <span class="lcard-icon">🔍</span>
+          <h3>Verify Certificate</h3>
+          <p>Employers, admissions officers and the public</p>
+          <span class="lcard-tag free">No wallet required</span>
+        </div>
+        <div class="lcard" onclick="enterPortal('institution')">
+          <span class="lcard-icon">🎓</span>
+          <h3>Institution Portal</h3>
+          <p>NUC-accredited universities and colleges</p>
+          <span class="lcard-tag wallet">MetaMask required</span>
+        </div>
+        <div class="lcard" onclick="enterPortal('admin')">
+          <span class="lcard-icon">🏛️</span>
+          <h3>NUC Admin</h3>
+          <p>National Universities Commission regulatory authority</p>
+          <span class="lcard-tag admin">Admin wallet required</span>
+        </div>
+      </div>
+      <div class="landing-continue" id="landingContinue">
+        <button onclick="continuePrevious()">↩ Continue where you left off</button>
+      </div>
+      <div class="landing-footer">
+        CertiVerf is a thesis prototype deployed on Polygon Amoy Testnet.<br/>
+        All certificate data is stored permanently on the blockchain.
+      </div>
+    </div>
+  </div>
+
   <header>
     <div class="brand">
       <div class="brand-shield">🛡️</div>
@@ -23,6 +63,7 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="change-role-btn" id="changeRoleBtn" onclick="showLanding()">⬅ Change Role</button>
       <span class="net-badge" id="netBadge"></span>
       <div class="wallet-pill" id="walletPill">
         <span class="wpill-dot"></span>
