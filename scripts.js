@@ -68,7 +68,7 @@ const CERT_ABI = [
         "name": "verifyCertificate",
         "outputs": [
             {
-                "components": 
+                "components":
                     [
                         { "internalType": "bytes32", "name": "metaHash", "type": "bytes32" },
                         { "internalType": "bytes32", "name": "docHash", "type": "bytes32" },
@@ -81,18 +81,18 @@ const CERT_ABI = [
                         { "internalType": "string", "name": "studentId", "type": "string" },
                         { "internalType": "string", "name": "email", "type": "string" },
                         { "internalType": "uint256", "name": "completionYear", "type": "uint256" },
-                        { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }, 
-                        { "internalType": "address", "name": "issuer", "type": "address" }, 
-                        { "internalType": "bool", "name": "isValid", "type": "bool" }, 
+                        { "internalType": "uint256", "name": "issuedAt", "type": "uint256" },
+                        { "internalType": "address", "name": "issuer", "type": "address" },
+                        { "internalType": "bool", "name": "isValid", "type": "bool" },
                         { "internalType": "string", "name": "revokeReason", "type": "string" },
                         { "internalType": "uint256", "name": "revokedAt", "type": "uint256" }
-                    ], 
-                "internalType": "struct CertificateRegistry.Certificate", 
-                "name": "", 
+                    ],
+                "internalType": "struct CertificateRegistry.Certificate",
+                "name": "",
                 "type": "tuple"
             }
         ],
-        "stateMutability": "view", 
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -109,13 +109,17 @@ const CERT_ABI = [
     }
 ];
 
-let provider, signer, userAddress, isOwner = false, isReg = false, instData = null, computedDocHash = null;
+let provider, signer, userAddress, isOwner = false,
+    isReg = false,
+    instData = null,
+    computedDocHash = null;
 
 const short = a => a ? a.slice(0, 6) + "..." + a.slice(-4) : "";
 const fmtDate = u => {
     if (!u || Number(u) === 0) return "—";
     return new Date(Number(u) * 1000).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })
 };
+
 const qrUrl = d => `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d)}&margin=10`;
 function copyTxt(t) {
     navigator.clipboard.writeText(t).then(() => {
@@ -191,37 +195,59 @@ window.addEventListener("load", async () => {
             document.getElementById("connectBtn").textContent = "Connected";
             await detectRole();
         }
+        // Restore active tab instantly before anything renders
+        const savedTab = sessionStorage.getItem("activeTab");
+        if (savedTab) switchTab(savedTab);
+        document.body.classList.remove("tab-loading");
     }
-    // Restore active tab instantly before anything renders
-    const savedTab = sessionStorage.getItem("activeTab");
-    if (savedTab) switchTab(savedTab);
-    document.body.classList.remove("tab-loading");
 });
 
 async function connectWallet() {
-    if (!window.ethereum) { alert("MetaMask is not installed. Install from metamask.io"); return }
-    const btn = document.getElementById("connectBtn"); btn.textContent = "Connecting..."; btn.disabled = true;
+    if (!window.ethereum) {
+        alert("MetaMask is not installed. Install from metamask.io");
+        return
+    }
+    const btn = document.getElementById("connectBtn");
+    btn.textContent = "Connecting...";
+    btn.disabled = true;
     try {
         provider = new ethers.BrowserProvider(window.ethereum);
         // Always prompt user to select which account to connect
         await provider.send("wallet_requestPermissions", [{ "eth_accounts": {} }]);
         await provider.send("eth_requestAccounts", []);
-        signer = await provider.getSigner(); userAddress = await signer.getAddress();
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
         const net = await provider.getNetwork();
-        const nb = document.getElementById("netBadge"); nb.classList.add("show");
-        if (Number(net.chainId) === AMOY_ID) { nb.className = "net-badge show ok"; nb.textContent = "Polygon Amoy ✓" }
-        else { nb.className = "net-badge show wrong"; nb.textContent = "Wrong network — switch to Polygon Amoy" }
+        const nb = document.getElementById("netBadge");
+        nb.classList.add("show");
+        if (Number(net.chainId) === AMOY_ID) {
+            nb.className = "net-badge show ok";
+            nb.textContent = "Polygon Amoy ✓"
+        }
+        else {
+            nb.className = "net-badge show wrong";
+            nb.textContent = "Wrong network — switch to Polygon Amoy"
+        }
         document.getElementById("walletAddr").textContent = short(userAddress);
         document.getElementById("disconnectBtn").style.display = "block";
         document.getElementById("walletPill").classList.add("show");
         btn.textContent = "Connected";
         await detectRole();
-    } catch (e) { btn.textContent = "Connect Wallet"; btn.disabled = false; console.error(e) }
+    } catch (e) {
+        btn.textContent = "Connect Wallet";
+        btn.disabled = false;
+        console.error(e)
+    }
 }
 
 function disconnectWallet() {
     // Reset all state
-    provider = null; signer = null; userAddress = null; isOwner = false; isReg = false; instData = null;
+    provider = null;
+    signer = null;
+    userAddress = null;
+    isOwner = false;
+    isReg = false;
+    instData = null;
     // Reset UI
     document.getElementById("walletPill").classList.remove("show");
     document.getElementById("connectBtn").textContent = "Connect Wallet";
@@ -264,9 +290,23 @@ async function detectRole() {
             document.getElementById("revokeCard").style.display = "none";
             document.getElementById("histCard").style.display = "none";
         }
-        else if (isReg) { rEl.textContent = instData[1]; showInstitution() }
-        else { let pend = false; try { await reg.getPendingInstitution(userAddress); pend = true } catch { } rEl.textContent = pend ? "Pending" : "Unregistered"; showInstitution(pend) }
-    } catch (e) { console.error("Role detection:", e) }
+        else if (isReg) {
+            rEl.textContent = instData[1];
+            showInstitution()
+        }
+        else {
+            let pend = false;
+            try {
+                await reg.getPendingInstitution(userAddress);
+                pend = true
+            } catch {
+
+            } rEl.textContent = pend ? "Pending" : "Unregistered";
+            showInstitution(pend)
+        }
+    } catch (e) {
+        console.error("Role detection:", e)
+    }
 }
 
 function showAdmin() {
@@ -308,13 +348,20 @@ async function loadRegistered() {
                 rows += `<tr>
           <td><strong>${d[0]}</strong></td>
           <td>${d[1]}</td>
-          <td><a href="${d[2]}" target="_blank" rel="noopener"
-            style="color:var(--g600);font-size:.82rem">${d[2]}</a></td>
-          <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">
+            <td>
+                <a href="${d[2]}" target="_blank" rel="noopener" style="color:var(--g600);font-size:.82rem">
+                ${d[2]}
+                </a>
+            </td>
+          <td style="font-family:monospace;
+          font-size:.68rem;
+          color:var(--n400)">
             ${ev.wallet.slice(0, 10)}...${ev.wallet.slice(-6)}</td>
           <td><span class="badge b-green" style="font-size:.65rem">✓ Active</span></td>
         </tr>`;
-            } catch { continue; }
+            } catch { 
+                continue; 
+            }
         }
         if (!rows) {
             el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No active institutions found.</p></div>`;
@@ -396,7 +443,9 @@ async function doRegister() {
         setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress);
         await detectRole()
     }
-    catch (e) { setSt("regSt", "error", e.reason || e.message); btn.disabled = false }
+    catch (e) { 
+        setSt("regSt", "error", e.reason || e.message); btn.disabled = false 
+    }
 }
 
 async function onPdf(input) {
@@ -422,16 +471,34 @@ async function doIssue() {
     }
     const dHash = computedDocHash || ethers.zeroPadValue("0x01", 32);
     const btn = document.getElementById("issueBtn");
-    btn.disabled = true; document.getElementById("issueResult").style.display = "none";
+    btn.disabled = true; 
+    document.getElementById("issueResult").style.display = "none";
     setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
     try {
-        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 }); setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); const receipt = await tx.wait();
-        let mHash = ""; for (const log of receipt.logs) { try { const p = cert.interface.parseLog(log); if (p && p.name === "CertificateIssued") { mHash = p.args.metaHash; break } } catch { } }
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer); 
+        const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 }); 
+        setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation..."); 
+        const receipt = await tx.wait();
+        let mHash = ""; 
+        for (const log of receipt.logs) { try { const p = cert.interface.parseLog(log); 
+            if (p && p.name === "CertificateIssued") 
+                { mHash = p.args.metaHash; break } 
+        } 
+            catch { 
+
+            } 
+        }
         setSt("issueSt", "success", "Certificate issued and permanently stored on the blockchain.");
         document.getElementById("issuedHash").textContent = mHash;
-        if (mHash) { const link = PAGE_URL + "?hash=" + mHash; document.getElementById("issueQRImg").src = qrUrl(link); document.getElementById("issueQR").style.display = "flex" }
+        if (mHash) { 
+            const link = PAGE_URL + "?hash=" + mHash; 
+            document.getElementById("issueQRImg").src = qrUrl(link); 
+            document.getElementById("issueQR").style.display = "flex" 
+        }
         document.getElementById("issueResult").style.display = "block"; btn.disabled = false;
-    } catch (e) { setSt("issueSt", "error", e.reason || e.message); btn.disabled = false }
+    } catch (e) { 
+        setSt("issueSt", "error", e.reason || e.message); btn.disabled = false 
+    }
 }
 
 async function doRevoke() {
