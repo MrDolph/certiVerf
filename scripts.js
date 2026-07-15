@@ -242,7 +242,10 @@ async function connectWallet() {
     } catch (e) {
         btn.textContent = "Connect Wallet";
         btn.disabled = false;
-        console.error(e);
+        // Silently handle user rejection — not an error
+        if (e.code !== 4001 && !e.message?.includes("rejected")) {
+            console.error(e);
+        }
     }
 }
 
@@ -382,7 +385,7 @@ function exportRegCSV() {
     if (!data.length) return;
     downloadCSV(
         "certiverf_registered_institutions.csv",
-        ["Institution","Acronym","Website","Wallet","Registered"],
+        ["Institution", "Acronym", "Website", "Wallet", "Registered"],
         data.map(ev => [ev.name || "", "", "", ev.wallet, fmtDate(ev.timestamp)])
     );
 }
@@ -523,7 +526,7 @@ function downloadCSV(filename, headers, rows) {
             ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
     const csv = [headers.map(escape).join(","),
-        ...rows.map(r => r.map(escape).join(","))].join("\n");
+    ...rows.map(r => r.map(escape).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -578,7 +581,7 @@ async function loadHistory() {
                 <td><strong>${c.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${c.studentId}</span></td>
                 <td>${c.programme}</td>
                 <td>${fmtDate(c.issuedAt)}</td>
-                <td>${statusBadge}${!s.valid ? `<br/><span style="font-size:.7rem;color:var(--revoked)">${s.reason.slice(0,40)}${s.reason.length>40?"...":""}</span>` : ""}</td>
+                <td>${statusBadge}${!s.valid ? `<br/><span style="font-size:.7rem;color:var(--revoked)">${s.reason.slice(0, 40)}${s.reason.length > 40 ? "..." : ""}</span>` : ""}</td>
                 <td><span class="mono-sm">${c.metaHash.slice(0, 14)}...</span><br/>
                 <button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${c.metaHash}')">Copy</button></td>
             </tr>`;
@@ -608,8 +611,8 @@ function exportHistCSV() {
     if (!data.length) return;
     downloadCSV(
         "certiverf_certificate_history.csv",
-        ["#","Student Name","Student ID","Programme","Date Issued","Status","MetaHash"],
-        data.map((c, i) => [i+1, c.studentName, c.studentId, c.programme, fmtDate(c.issuedAt), c.valid?"Valid":"Revoked", c.metaHash])
+        ["#", "Student Name", "Student ID", "Programme", "Date Issued", "Status", "MetaHash"],
+        data.map((c, i) => [i + 1, c.studentName, c.studentId, c.programme, fmtDate(c.issuedAt), c.valid ? "Valid" : "Revoked", c.metaHash])
     );
 }
 
@@ -842,7 +845,7 @@ async function loadStats() {
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, rp);
         await Promise.all(Object.keys(instMap).map(async key => {
             try { const d = await reg.getInstitution(instMap[key].wallet); instMap[key].website = d[2]; }
-            catch {}
+            catch { }
         }));
 
         const statCards = `
@@ -873,7 +876,7 @@ async function loadStats() {
                     <strong>${info.name}</strong><br/>
                     ${info.website ? `<a href="${info.website}" target="_blank" rel="noopener" style="color:var(--g600);font-size:.75rem">${info.website}</a>` : ""}
                 </td>
-                <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${wallet.slice(0,10)}...${wallet.slice(-6)}</td>
+                <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${wallet.slice(0, 10)}...${wallet.slice(-6)}</td>
                 <td>${info.registeredAt ? fmtDate(info.registeredAt) : "—"}</td>
                 <td style="text-align:center"><span style="background:var(--g100);color:var(--g700);font-weight:700;padding:4px 10px;border-radius:20px;font-size:.82rem">${info.total}</span></td>
                 <td style="text-align:center">${info.revoked > 0 ? `<span style="background:#FEE2E2;color:var(--revoked);font-weight:700;padding:4px 10px;border-radius:20px;font-size:.82rem">${info.revoked}</span>` : `<span style="color:var(--n400);font-size:.8rem">—</span>`}</td>
@@ -904,7 +907,7 @@ function exportStatsCSV() {
     if (!d) return;
     downloadCSV(
         "certiverf_statistics.csv",
-        ["Institution","Website","Wallet","Registered","Total Issued","Revoked","Valid"],
+        ["Institution", "Website", "Wallet", "Registered", "Total Issued", "Revoked", "Valid"],
         d.approved.map(a => {
             const certs = d.issued.filter(c => c.issuer.toLowerCase() === a.wallet.toLowerCase());
             const revoked = certs.filter(c => !d.statusMap[c.id]).length;
