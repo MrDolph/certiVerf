@@ -210,9 +210,16 @@ Full-screen role selector on first visit. Three cards: Verify Certificate, Insti
 ### Institution Portal
 - NUC registration form
 - Certificate issuance with auto SHA-256 PDF fingerprinting (Web Crypto API)
-- Certificate history (The Graph)
+- Certificate history (The Graph) with **Valid/Revoked status badge** + **CSV export**
 - Certificate revocation with mandatory on-chain reason
 - QR code generation after issuance
+
+### Mobile Experience
+- **Hamburger sidebar menu (☰)** — on mobile, all wallet controls (connect, disconnect, change role, wallet address, network status) move into a clean slide-in right drawer keeping the header uncluttered
+- Responsive landing cards — 1 column on phones, 2 on tablets
+- Horizontal-scroll tables on narrow screens
+- Touch-friendly button sizing throughout
+- Single-column form layout on mobile
 
 ### Public Verification Portal
 - Wallet-free — JsonRpcProvider
@@ -373,9 +380,37 @@ Open portal → click Verify Certificate → paste metaHash or scan QR → resul
 **Problem:** Transactions failed with `gas tip cap below minimum`.  
 **Solution:** All write functions include explicit gas overrides (65 Gwei priority, 70 Gwei max). `issueCertificate` uses 500,000 gas limit (actual cost: 398,016).
 
+### MetaMask User Rejection (wallet_requestPermissions)
+**Behaviour:** When the user cancels the MetaMask account selector popup, error code `4001` is returned. This is expected Web3 behaviour — not a system error.
+**Handling:** The portal catches this silently, resets the Connect Wallet button, and does not log to the console. Genuine errors are still logged.
+
+---
+
 ### master vs main Branch
 **Problem:** Local `git init` creates `master`; GitHub defaults to `main`.  
 **Solution:** `git branch -m master main` then pull with `--allow-unrelated-histories`.
+
+---
+
+### IPFS CID Workflow and Immutability Trade-off
+**Design decision:** The system has no post-issuance modification function — immutability is enforced structurally. This means an IPFS CID cannot be retroactively added to a certificate issued without one.
+
+**Correct workflow:** Upload PDF to Pinata first → copy CID → issue certificate with CID included → metaHash and QR generated on-chain → print QR on physical certificate.
+
+**Future enhancement:** For certificates intentionally issued without a CID during prototype testing, a restricted `addIpfsCid()` function could permit one-time CID assignment — only where the field is empty — while continuing to prohibit substitution of an existing CID. This is a recommended next-version enhancement, not a limitation of the current implementation.
+
+---
+
+### IPFS Single-Provider Dependency
+**Risk:** Pinata is a private commercial entity. If it ceases operations, document retrieval fails — though on-chain metaHash and docHash evidence survives permanently.
+
+**Recovery:** Because IPFS uses content addressing, re-uploading the same PDF to any IPFS provider anywhere produces the identical CID. No blockchain transactions needed.
+
+**Recommended progression (Chapter 5, Section 5.6.8):**
+1. Commercial pinning (Pinata/Infura) — immediate, foreign dependency
+2. Dedicated NUC IPFS node — sovereign, within Nigeria
+3. Federated model — each of 170 universities runs its own node, NUC holds national backup
+4. NITDA national IPFS infrastructure — aligned with the NERD Policy framework
 
 ---
 
@@ -396,6 +431,12 @@ Open portal → click Verify Certificate → paste metaHash or scan QR → resul
 | Role selection landing page | ✗ | ✗ | ✗ | **✓** |
 | Nigerian regulatory context (NUC/NCVS) | ✗ | ✗ | ✗ | **✓** |
 | Positioned against an operational system | ✗ | ✗ | ✗ | **✓** |
+| The Graph decentralised event indexing | ✗ | ✗ | ✗ | **✓** |
+| Certificate statistics per institution (NUC dashboard) | ✗ | ✗ | ✗ | **✓** |
+| CSV export for institutions and certificates | ✗ | ✗ | ✗ | **✓** |
+| Valid/Revoked status in certificate history | ✗ | ✗ | ✗ | **✓** |
+| National IPFS infrastructure recommendation (NITDA) | ✗ | ✗ | ✗ | **✓** |
+| Mobile sidebar drawer for wallet controls | ✗ | ✗ | ✗ | **✓** |
 
 ---
 
