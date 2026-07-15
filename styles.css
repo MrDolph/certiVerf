@@ -983,7 +983,7 @@ main {
     }
 
     main {
-        padding: 16px 12px 80px
+        padding: 16px 10px 80px
     }
 
     header {
@@ -1162,7 +1162,18 @@ main {
 /* Scroll margin fix for sticky header */
 #certCard { scroll-margin-top: 80px; }
 
-@media (max-width: 600px) {
-    .landing-cards { grid-template-columns: 1fr; }
-    .landing-logo h1 { font-size: 2rem; }
+@media (max-width: 768px) {
+    .landing-cards { grid-template-columns: 1fr; gap: 12px; }
+    .landing-logo h1 { font-size: 1.8rem; }
+    .lcard { padding: 24px 16px 20px; }
+    .lcard-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .landing-inner { padding: 20px 16px; }
+    .landing-logo { margin-bottom: 24px; }
+    .landing-logo .lshield { width: 52px; height: 52px; font-size: 24px; }
+    .landing-prompt { font-size: .85rem; margin-bottom: 20px; }
+    .landing-footer { margin-top: 24px; font-size: .65rem; }
+}
+
+@media (min-width: 480px) and (max-width: 768px) {
+    .landing-cards { grid-template-columns: 1fr 1fr; }
 }

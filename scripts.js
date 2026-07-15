@@ -113,22 +113,6 @@ if (window.ethereum) {
 window.addEventListener("load", async () => {
 
     // Check if user has already chosen a role — skip landing if so
-    // If URL has a hash parameter (QR scan) — skip landing, verify immediately
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlHash = urlParams.get("hash");
-    if (urlHash) {
-        document.getElementById("landingScreen").style.display = "none";
-        document.body.classList.remove("tab-loading");
-        switchTab("verify");
-        sessionStorage.setItem("selectedRole", "verify");
-        sessionStorage.setItem("activeTab", "verify");
-        document.getElementById("changeRoleBtn").classList.add("show");
-        document.getElementById("verifyHash").value = urlHash;
-        runVerify();
-        return;
-    }
-
-    // Check if user has already chosen a role — skip landing if so
     const selectedRole = sessionStorage.getItem("selectedRole");
     const savedTab = sessionStorage.getItem("activeTab");
 
@@ -334,13 +318,30 @@ async function loadRegistered() {
             el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No active institutions found.</p></div>`;
             return;
         }
-        el.innerHTML = `<table class="hist-tbl">
-            <thead><tr><th>Institution</th><th>Acronym</th><th>Website</th><th>Wallet</th><th>Status</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>`;
+        // Store for CSV
+        window._regData = events;
+        el.innerHTML = `
+            <div style="display:flex;justify-content:flex-end;padding:12px 16px 0">
+                <button class="btn btn-ghost btn-sm" onclick="exportRegCSV()">⬇ Export CSV</button>
+            </div>
+            <div style="overflow-x:auto">
+            <table class="hist-tbl">
+                <thead><tr><th>Institution</th><th>Acronym</th><th>Website</th><th>Wallet</th><th>Status</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table></div>`;
     } catch (e) {
         el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`;
     }
+}
+
+function exportRegCSV() {
+    const data = window._regData || [];
+    if (!data.length) return;
+    downloadCSV(
+        "certiverf_registered_institutions.csv",
+        ["Institution", "Acronym", "Website", "Wallet", "Registered"],
+        data.map(ev => [ev.name || "", "", "", ev.wallet, fmtDate(ev.timestamp)])
+    );
 }
 
 function showInstitution(isPend = false) {
@@ -471,6 +472,22 @@ async function doRevoke() {
     } catch (e) { setSt("revokeSt", "error", e.reason || e.message); btn.disabled = false; }
 }
 
+
+function downloadCSV(filename, headers, rows) {
+    const escape = v => {
+        const s = String(v ?? "");
+        return s.includes(",") || s.includes('"') || s.includes("\n")
+            ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const csv = [headers.map(escape).join(","),
+    ...rows.map(r => r.map(escape).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
 async function loadHistory() {
     const el = document.getElementById("histContent");
     el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from The Graph...</p></div>`;
@@ -480,13 +497,8 @@ async function loadHistory() {
                 where: { issuer: "${userAddress.toLowerCase()}" }
                 orderBy: issuedAt
                 orderDirection: desc
-            ) {
-                metaHash
-                studentName
-                studentId
-                programme
-                issuedAt
-            }
+                first: 1000
+            ) { metaHash studentName studentId programme issuedAt }
         }`;
         const res = await fetch(GRAPH_URL, {
             method: "POST",
@@ -500,21 +512,62 @@ async function loadHistory() {
             el.innerHTML = `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet.</p></div>`;
             return;
         }
-        const rows = events.map((c, i) => `<tr>
-            <td>${i + 1}</td>
-            <td><strong>${c.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${c.studentId}</span></td>
-            <td>${c.programme}</td>
-            <td>${fmtDate(c.issuedAt)}</td>
-            <td><span class="mono-sm">${c.metaHash.slice(0, 14)}...</span><br/>
-            <button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${c.metaHash}')">Copy hash</button></td>
-        </tr>`).join("");
-        el.innerHTML = `<table class="hist-tbl">
-            <thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Certificate Hash</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>`;
+        // Check on-chain validity for each certificate
+        const rp = new ethers.JsonRpcProvider(RPC_URL);
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp);
+        const statuses = await Promise.all(events.map(async c => {
+            try {
+                const r = await cert.verifyCertificate(c.metaHash);
+                return { valid: r.isValid, reason: r.revokeReason, revokedAt: r.revokedAt };
+            } catch { return { valid: true, reason: "", revokedAt: 0 }; }
+        }));
+
+        // Store for CSV export
+        window._histData = events.map((c, i) => ({ ...c, ...statuses[i] }));
+
+        const rows = events.map((c, i) => {
+            const s = statuses[i];
+            const statusBadge = s.valid
+                ? `<span class="badge b-green" style="font-size:.65rem">✓ Valid</span>`
+                : `<span class="badge b-red" style="font-size:.65rem">✗ Revoked</span>`;
+            return `<tr>
+                <td>${i + 1}</td>
+                <td><strong>${c.studentName}</strong><br/><span style="color:var(--n500);font-size:.75rem">${c.studentId}</span></td>
+                <td>${c.programme}</td>
+                <td>${fmtDate(c.issuedAt)}</td>
+                <td>${statusBadge}${!s.valid ? `<br/><span style="font-size:.7rem;color:var(--revoked)">${s.reason.slice(0, 40)}${s.reason.length > 40 ? "..." : ""}</span>` : ""}</td>
+                <td><span class="mono-sm">${c.metaHash.slice(0, 14)}...</span><br/>
+                <button class="copy-btn" style="margin-top:4px" onclick="navigator.clipboard.writeText('${c.metaHash}')">Copy</button></td>
+            </tr>`;
+        }).join("");
+
+        const validCount = statuses.filter(s => s.valid).length;
+        const revokedCount = statuses.filter(s => !s.valid).length;
+
+        el.innerHTML = `
+            <div style="display:flex;gap:12px;padding:16px 16px 0;flex-wrap:wrap">
+                <span style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:8px 16px;font-size:.82rem;font-weight:600;color:var(--g700)">✓ ${validCount} Valid</span>
+                ${revokedCount > 0 ? `<span style="background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:8px 16px;font-size:.82rem;font-weight:600;color:var(--revoked)">✗ ${revokedCount} Revoked</span>` : ""}
+                <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportHistCSV()">⬇ Export CSV</button>
+            </div>
+            <div style="overflow-x:auto">
+            <table class="hist-tbl">
+                <thead><tr><th>#</th><th>Graduate</th><th>Programme</th><th>Date Issued</th><th>Status</th><th>Certificate Hash</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table></div>`;
     } catch (e) {
         el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`;
     }
+}
+
+function exportHistCSV() {
+    const data = window._histData || [];
+    if (!data.length) return;
+    downloadCSV(
+        "certiverf_certificate_history.csv",
+        ["#", "Student Name", "Student ID", "Programme", "Date Issued", "Status", "MetaHash"],
+        data.map((c, i) => [i + 1, c.studentName, c.studentId, c.programme, fmtDate(c.issuedAt), c.valid ? "Valid" : "Revoked", c.metaHash])
+    );
 }
 
 async function loadPending() {
@@ -689,8 +742,8 @@ async function loadStats() {
     el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading statistics from The Graph...</p></div>`;
     try {
         const query = `{
-            certificateIssueds(first: 1000) { id issuer institutionName }
-            registrationApproveds(first: 1000) { id wallet name }
+            certificateIssueds(first: 1000) { id metaHash issuer institutionName studentName studentId programme issuedAt }
+            registrationApproveds(first: 1000) { id wallet name timestamp }
         }`;
         const res = await fetch(GRAPH_URL, {
             method: "POST",
@@ -703,44 +756,94 @@ async function loadStats() {
         const issued = json.data.certificateIssueds || [];
         const approved = json.data.registrationApproveds || [];
 
-        // Global stats
+        // Check revocation status for all certificates
+        const rp = new ethers.JsonRpcProvider(RPC_URL);
+        const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, rp);
+        const statusMap = {};
+        await Promise.all(issued.map(async c => {
+            try {
+                const r = await cert.verifyCertificate(c.metaHash || c.id);
+                statusMap[c.id] = r.isValid;
+            } catch { statusMap[c.id] = true; }
+        }));
+
         const totalIssued = issued.length;
+        const totalRevoked = Object.values(statusMap).filter(v => !v).length;
+        const totalValid = totalIssued - totalRevoked;
         const totalInstitutions = approved.length;
 
-        // Per-institution breakdown
+        // Store for CSV
+        window._statsData = { issued, approved, statusMap };
+
+        // Per-institution breakdown with full details
         const instMap = {};
-        for (const cert of issued) {
-            const key = cert.issuer.toLowerCase();
-            if (!instMap[key]) instMap[key] = { name: cert.institutionName, count: 0 };
-            instMap[key].count++;
+        for (const c of issued) {
+            const key = c.issuer.toLowerCase();
+            if (!instMap[key]) {
+                const inst = approved.find(a => a.wallet.toLowerCase() === key);
+                instMap[key] = {
+                    name: c.institutionName,
+                    wallet: c.issuer,
+                    website: "",
+                    registeredAt: inst ? inst.timestamp : 0,
+                    total: 0, revoked: 0, certs: []
+                };
+            }
+            instMap[key].total++;
+            if (!statusMap[c.id]) instMap[key].revoked++;
+            instMap[key].certs.push(c);
         }
 
+        // Get website from contract for each institution
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, rp);
+        await Promise.all(Object.keys(instMap).map(async key => {
+            try { const d = await reg.getInstitution(instMap[key].wallet); instMap[key].website = d[2]; }
+            catch { }
+        }));
+
         const statCards = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
-                <div style="background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:20px;text-align:center">
-                    <div style="font-size:2.2rem;font-weight:800;color:var(--g600);font-family:'Playfair Display',serif">${totalIssued}</div>
-                    <div style="font-size:.8rem;font-weight:600;color:var(--n500);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Total Certificates Issued</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+                <div style="background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:18px;text-align:center">
+                    <div style="font-size:2rem;font-weight:800;color:var(--g600);font-family:'Playfair Display',serif">${totalIssued}</div>
+                    <div style="font-size:.75rem;font-weight:600;color:var(--n500);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Total Issued</div>
                 </div>
-                <div style="background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:20px;text-align:center">
-                    <div style="font-size:2.2rem;font-weight:800;color:var(--g600);font-family:'Playfair Display',serif">${totalInstitutions}</div>
-                    <div style="font-size:.8rem;font-weight:600;color:var(--n500);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Registered Institutions</div>
+                <div style="background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:18px;text-align:center">
+                    <div style="font-size:2rem;font-weight:800;color:var(--g600);font-family:'Playfair Display',serif">${totalValid}</div>
+                    <div style="font-size:.75rem;font-weight:600;color:var(--n500);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Currently Valid</div>
+                </div>
+                <div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:10px;padding:18px;text-align:center">
+                    <div style="font-size:2rem;font-weight:800;color:var(--revoked);font-family:'Playfair Display',serif">${totalRevoked}</div>
+                    <div style="font-size:.75rem;font-weight:600;color:var(--n500);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Revoked</div>
+                </div>
+                <div style="background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:18px;text-align:center">
+                    <div style="font-size:2rem;font-weight:800;color:var(--g600);font-family:'Playfair Display',serif">${totalInstitutions}</div>
+                    <div style="font-size:.75rem;font-weight:600;color:var(--n500);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Institutions</div>
                 </div>
             </div>`;
 
         const instRows = Object.entries(instMap)
-            .sort((a, b) => b[1].count - a[1].count)
+            .sort((a, b) => b[1].total - a[1].total)
             .map(([wallet, info], i) => `<tr>
                 <td>${i + 1}</td>
-                <td><strong>${info.name}</strong></td>
-                <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${wallet.slice(0,10)}...${wallet.slice(-6)}</td>
-                <td style="text-align:center"><span style="background:var(--g100);color:var(--g700);font-weight:700;padding:4px 12px;border-radius:20px;font-size:.85rem">${info.count}</span></td>
+                <td>
+                    <strong>${info.name}</strong><br/>
+                    ${info.website ? `<a href="${info.website}" target="_blank" rel="noopener" style="color:var(--g600);font-size:.75rem">${info.website}</a>` : ""}
+                </td>
+                <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${wallet.slice(0, 10)}...${wallet.slice(-6)}</td>
+                <td>${info.registeredAt ? fmtDate(info.registeredAt) : "—"}</td>
+                <td style="text-align:center"><span style="background:var(--g100);color:var(--g700);font-weight:700;padding:4px 10px;border-radius:20px;font-size:.82rem">${info.total}</span></td>
+                <td style="text-align:center">${info.revoked > 0 ? `<span style="background:#FEE2E2;color:var(--revoked);font-weight:700;padding:4px 10px;border-radius:20px;font-size:.82rem">${info.revoked}</span>` : `<span style="color:var(--n400);font-size:.8rem">—</span>`}</td>
+                <td style="text-align:center"><span style="background:var(--g50);color:var(--g700);font-weight:700;padding:4px 10px;border-radius:20px;font-size:.82rem">${info.total - info.revoked}</span></td>
             </tr>`).join("");
 
         const instTable = instRows ? `
-            <div style="font-size:.82rem;font-weight:700;color:var(--n700);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Certificates per Institution</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="font-size:.82rem;font-weight:700;color:var(--n700);text-transform:uppercase;letter-spacing:.06em">Per-Institution Breakdown</div>
+                <button class="btn btn-ghost btn-sm" onclick="exportStatsCSV()">⬇ Export CSV</button>
+            </div>
             <div style="overflow-x:auto">
                 <table class="hist-tbl">
-                    <thead><tr><th>#</th><th>Institution</th><th>Wallet</th><th style="text-align:center">Certificates Issued</th></tr></thead>
+                    <thead><tr><th>#</th><th>Institution</th><th>Wallet</th><th>Registered</th><th style="text-align:center">Total</th><th style="text-align:center">Revoked</th><th style="text-align:center">Valid</th></tr></thead>
                     <tbody>${instRows}</tbody>
                 </table>
             </div>` : `<div class="empty"><span class="ei">📜</span><p>No certificates issued yet.</p></div>`;
@@ -750,4 +853,18 @@ async function loadStats() {
     } catch (e) {
         el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`;
     }
+}
+
+function exportStatsCSV() {
+    const d = window._statsData;
+    if (!d) return;
+    downloadCSV(
+        "certiverf_statistics.csv",
+        ["Institution", "Website", "Wallet", "Registered", "Total Issued", "Revoked", "Valid"],
+        d.approved.map(a => {
+            const certs = d.issued.filter(c => c.issuer.toLowerCase() === a.wallet.toLowerCase());
+            const revoked = certs.filter(c => !d.statusMap[c.id]).length;
+            return [a.name, "", a.wallet, fmtDate(a.timestamp), certs.length, revoked, certs.length - revoked];
+        })
+    );
 }
