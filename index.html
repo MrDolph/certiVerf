@@ -62,7 +62,8 @@
         <p>Blockchain Certificate Verification · NOUN MSc CIT899 Prototype</p>
       </div>
     </div>
-    <div class="header-right">
+    <!-- Desktop header controls -->
+    <div class="header-right" id="headerRight">
       <button class="change-role-btn" id="changeRoleBtn" onclick="showLanding()">⬅ Change Role</button>
       <span class="net-badge" id="netBadge"></span>
       <div class="wallet-pill" id="walletPill">
@@ -74,7 +75,39 @@
       <button class="btn-connect" id="disconnectBtn" onclick="disconnectWallet()"
         style="display:none;background:#B91C1C">Disconnect</button>
     </div>
+
+    <!-- Mobile hamburger button -->
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">☰</button>
   </header>
+
+  <!-- Mobile sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Mobile sidebar drawer -->
+  <div class="sidebar-drawer" id="sidebarDrawer">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <span class="sidebar-shield">🛡️</span>
+        <span style="font-family:'Playfair Display',serif;font-weight:800;color:var(--white);font-size:1rem">CertiVerf</span>
+      </div>
+      <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+    </div>
+    <div class="sidebar-body">
+      <div class="sidebar-net" id="sidebarNet"></div>
+      <div class="sidebar-wallet" id="sidebarWallet" style="display:none">
+        <div class="sidebar-wallet-row">
+          <span class="wpill-dot" style="width:8px;height:8px;border-radius:50%;background:var(--g400);display:inline-block"></span>
+          <span style="font-size:.8rem;color:var(--white)" id="sidebarAddr"></span>
+        </div>
+        <div class="sidebar-role" id="sidebarRoleLabel"></div>
+      </div>
+      <div class="sidebar-actions">
+        <button class="sidebar-btn" id="sidebarChangeRole" onclick="showLanding();closeSidebar()" style="display:none">⬅ Change Role</button>
+        <button class="sidebar-btn sidebar-connect" id="sidebarConnect" onclick="connectWallet();closeSidebar()">Connect Wallet</button>
+        <button class="sidebar-btn sidebar-disconnect" id="sidebarDisconnect" onclick="disconnectWallet();closeSidebar()" style="display:none">Disconnect</button>
+      </div>
+    </div>
+  </div>
 
 
 
