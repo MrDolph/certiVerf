@@ -348,9 +348,11 @@ async function loadRegistered() {
         }
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
         let rows = "";
+        const fullData = [];
         for (const ev of events) {
             try {
                 const d = await reg.getInstitution(ev.wallet);
+                fullData.push({ name: d[0], acronym: d[1], website: d[2], wallet: ev.wallet, timestamp: ev.timestamp });
                 rows += `<tr>
                     <td><strong>${d[0]}</strong></td>
                     <td>${d[1]}</td>
@@ -365,7 +367,7 @@ async function loadRegistered() {
             return;
         }
         // Store for CSV
-        window._regData = events;
+        window._regData = fullData;
         el.innerHTML = `
             <div style="display:flex;justify-content:flex-end;padding:12px 16px 0">
                 <button class="btn btn-ghost btn-sm" onclick="exportRegCSV()">⬇ Export CSV</button>
@@ -386,7 +388,7 @@ function exportRegCSV() {
     downloadCSV(
         "certiverf_registered_institutions.csv",
         ["Institution", "Acronym", "Website", "Wallet", "Registered"],
-        data.map(ev => [ev.name || "", "", "", ev.wallet, fmtDate(ev.timestamp)])
+        data.map(ev => [ev.name || "", ev.acronym || "", ev.website || "", ev.wallet, fmtDate(ev.timestamp)])
     );
 }
 
