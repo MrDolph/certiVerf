@@ -436,7 +436,7 @@ async function doRegister() {
     setSt("regSt", "pending", "Submitting registration to blockchain...");
     try {
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
-        const tx = await reg.requestRegistration(name, acr, web, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        const tx = await reg.requestRegistration(name, acr, web, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 400000 });
         setSt("regSt", "pending", "Transaction submitted — awaiting confirmation...");
         await tx.wait();
         setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress);
@@ -680,7 +680,7 @@ async function doApprove(addr, name) {
     setSt("adminSt", "pending", `Approving ${name}...`);
     try {
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
-        const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 });
         setSt("adminSt", "pending", "Awaiting confirmation...");
         await tx.wait();
         const lsApp = JSON.parse(localStorage.getItem("cv_approved") || "[]");
