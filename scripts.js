@@ -836,9 +836,6 @@ async function loadStats() {
         const totalValid = totalIssued - totalRevoked;
         const totalInstitutions = approved.length;
 
-        // Store for CSV
-        window._statsData = { issued, approved, statusMap };
-
         // Per-institution breakdown with full details
         const instMap = {};
         for (const c of issued) {
@@ -858,12 +855,18 @@ async function loadStats() {
             instMap[key].certs.push(c);
         }
 
-        // Get website from contract for each institution
+        // Get website from contract for every approved institution (not just active issuers)
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, rp);
-        await Promise.all(Object.keys(instMap).map(async key => {
-            try { const d = await reg.getInstitution(instMap[key].wallet); instMap[key].website = d[2]; }
-            catch { }
+        const websiteMap = {};
+        await Promise.all(approved.map(async a => {
+            const key = a.wallet.toLowerCase();
+            try { const d = await reg.getInstitution(a.wallet); websiteMap[key] = d[2]; }
+            catch { websiteMap[key] = ""; }
         }));
+        for (const key of Object.keys(instMap)) instMap[key].website = websiteMap[key] || "";
+
+        // Store for CSV
+        window._statsData = { issued, approved, statusMap, websiteMap };
 
         const statCards = `
             <div class="stat-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px">
@@ -928,7 +931,8 @@ function exportStatsCSV() {
         d.approved.map(a => {
             const certs = d.issued.filter(c => c.issuer.toLowerCase() === a.wallet.toLowerCase());
             const revoked = certs.filter(c => !d.statusMap[c.id]).length;
-            return [a.name, "", a.wallet, fmtDate(a.timestamp), certs.length, revoked, certs.length - revoked];
+            const website = (d.websiteMap && d.websiteMap[a.wallet.toLowerCase()]) || "";
+            return [a.name, website, a.wallet, fmtDate(a.timestamp), certs.length, revoked, certs.length - revoked];
         })
     );
 }
