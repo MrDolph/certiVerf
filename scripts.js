@@ -439,9 +439,6 @@ async function doRegister() {
         const tx = await reg.requestRegistration(name, acr, web, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
         setSt("regSt", "pending", "Transaction submitted — awaiting confirmation...");
         await tx.wait();
-        const lsPending = JSON.parse(localStorage.getItem('cv_pending') || '[]');
-        lsPending.push({ wallet: userAddress, name: name, acronym: acr, website: web, ts: Date.now() });
-        localStorage.setItem('cv_pending', JSON.stringify(lsPending));
         setSt("regSt", "success", "Registration submitted! NUC Admin will see your request automatically. Your wallet: " + userAddress);
         await detectRole();
     } catch (e) { setSt("regSt", "error", e.reason || e.message); btn.disabled = false; }
@@ -620,44 +617,62 @@ async function loadPending() {
     const list = document.getElementById("pendingList");
     list.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading pending applications...</p></div>`;
     try {
-        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
-        const lsPending = JSON.parse(localStorage.getItem('cv_pending') || '[]');
-        let recentAddrs = [];
-        try {
-            const curBlk = await provider.getBlockNumber();
-            const reqEv = await reg.queryFilter(reg.filters.RegistrationRequested(), Math.max(0, curBlk - 10), "latest");
-            recentAddrs = reqEv.map(e => ({ wallet: e.args.wallet, name: e.args.name, acronym: e.args.acronym, website: "" }));
-        } catch { }
-        const allMap = {};
-        for (const r of [...lsPending, ...recentAddrs]) allMap[r.wallet.toLowerCase()] = { wallet: r.wallet, name: r.name, acronym: r.acronym, website: r.website || "" };
-        const allPending = Object.values(allMap);
-        if (allPending.length === 0) {
-            list.innerHTML = `<div class="empty"><span class="ei">ℹ️</span><p style="color:var(--n700);font-size:.85rem;line-height:1.6">No pending applications found.<br/>Use the <strong>Look Up an Institution</strong> tool below if you have a wallet address.</p></div>`;
+        const query = `{
+            registrationRequesteds(orderBy: blockTimestamp, orderDirection: asc, first: 1000) {
+                wallet
+                name
+                acronym
+            }
+            registrationApproveds(first: 1000) {
+                wallet
+            }
+            registrationRejecteds(first: 1000) {
+                wallet
+            }
+        }`;
+        const res = await fetch(GRAPH_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query })
+        });
+        const json = await res.json();
+        if (json.errors) throw new Error(json.errors[0].message);
+        if (!json.data) throw new Error("No data returned from The Graph");
+
+        const requested = json.data.registrationRequesteds || [];
+        const decided = new Set([
+            ...(json.data.registrationApproveds || []).map(e => e.wallet.toLowerCase()),
+            ...(json.data.registrationRejecteds || []).map(e => e.wallet.toLowerCase())
+        ]);
+
+        // Dedupe requests per wallet (keep latest request if someone re-applied), then drop anyone already approved/rejected
+        const byWallet = {};
+        for (const r of requested) byWallet[r.wallet.toLowerCase()] = r;
+        const candidates = Object.values(byWallet).filter(r => !decided.has(r.wallet.toLowerCase()));
+
+        if (candidates.length === 0) {
+            list.innerHTML = `<div class="empty"><span class="ei">✅</span><p>No pending applications at this time.</p></div>`;
             return;
         }
+
+        // Cross-check each candidate against live contract state (covers subgraph indexing lag / edge cases)
+        const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
         list.innerHTML = "";
         let shownAny = false;
-        const approvedWallets = [];
-        for (const item of allPending) {
-            const isReg = await reg.isRegistered(item.wallet);
-            if (isReg) { approvedWallets.push(item.wallet.toLowerCase()); continue; }
-            let stillPending = false; let web = item.website || "";
-            try { const pd = await reg.getPendingInstitution(item.wallet); stillPending = true; web = web || pd[2]; } catch { }
-            if (!stillPending) { approvedWallets.push(item.wallet.toLowerCase()); continue; }
+        for (const item of candidates) {
+            let stillPending = false; let web = "";
+            try { const pd = await reg.getPendingInstitution(item.wallet); stillPending = true; web = pd[2] || ""; } catch { }
+            if (!stillPending) continue;
             shownAny = true;
             const el = document.createElement("div"); el.className = "pend-row";
             el.innerHTML = `<div class="pend-info"><h3>${item.name} <span style="font-weight:400;color:var(--n500)">(${item.acronym})</span></h3>${web ? `<p>${web}</p>` : ""}<div class="pend-addr">${item.wallet}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${item.wallet}','${item.name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${item.wallet}','${item.name}')">✗ Reject</button></div>`;
             list.appendChild(el);
         }
-        if (approvedWallets.length > 0) {
-            const cleaned = lsPending.filter(r => !approvedWallets.includes(r.wallet.toLowerCase()));
-            localStorage.setItem('cv_pending', JSON.stringify(cleaned));
-        }
         if (!shownAny) {
             list.innerHTML = `<div class="empty"><span class="ei">✅</span><p>No pending applications at this time.</p></div>`;
         }
     } catch (e) {
-        list.innerHTML = `<div class="empty"><span class="ei">ℹ️</span><p style="color:var(--n700);font-size:.85rem">Use the <strong>Look Up an Institution</strong> tool below.</p></div>`;
+        list.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p style="color:var(--n700);font-size:.85rem">${e.message}<br/><br/>Use the <strong>Look Up an Institution</strong> tool below if the subgraph is temporarily unavailable.</p></div>`;
     }
 }
 
