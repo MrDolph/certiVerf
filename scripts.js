@@ -5,6 +5,15 @@ const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/3RE7F8bPJ2MofC94L2tdP";
 const AMOY_ID = 80002;
 const PAGE_URL = window.location.href.split("?")[0];
 
+// Wallets to exclude from the Registered Institutions / Statistics display and CSV exports.
+// This is a DISPLAY-ONLY filter — the underlying on-chain approval is untouched.
+// Used for cases like the NUC admin wallet being mistakenly approved as an institution;
+// once InstitutionRegistry.revokeInstitution() is deployed, this can be phased out in
+// favor of properly revoking the wallet on-chain instead of hiding it client-side.
+const HIDDEN_WALLETS = [
+    "0x44f586b4991b622fc44b31225aae0b85415efb6e" // NUC admin wallet, mistakenly self-approved as "University of Lagos"
+];
+
 const REG_ABI = [
     { "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
     { "inputs": [{ "internalType": "string", "name": "_name", "type": "string" }, { "internalType": "string", "name": "_acronym", "type": "string" }, { "internalType": "string", "name": "_website", "type": "string" }], "name": "requestRegistration", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
@@ -341,7 +350,8 @@ async function loadRegistered() {
         });
         const jsonReg = await res.json();
         if (jsonReg.errors) throw new Error(jsonReg.errors[0].message);
-        const events = jsonReg.data ? jsonReg.data.registrationApproveds : [];
+        const events = (jsonReg.data ? jsonReg.data.registrationApproveds : [])
+            .filter(e => !HIDDEN_WALLETS.includes(e.wallet.toLowerCase()));
         if (!events || !events.length) {
             el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No registered institutions yet.</p></div>`;
             return;
@@ -818,7 +828,8 @@ async function loadStats() {
         if (json.errors) throw new Error(json.errors[0].message);
         if (!json.data) throw new Error("No data returned from The Graph");
         const issued = json.data.certificateIssueds || [];
-        const approved = json.data.registrationApproveds || [];
+        const approved = (json.data.registrationApproveds || [])
+            .filter(a => !HIDDEN_WALLETS.includes(a.wallet.toLowerCase()));
 
         // Check revocation status for all certificates
         const rp = new ethers.JsonRpcProvider(RPC_URL);
