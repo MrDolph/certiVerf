@@ -1,4 +1,4 @@
-const GRAPH_URL = "https://api.studio.thegraph.com/query/1756477/certiverf/v0.0.1";
+const GRAPH_URL = "https://api.studio.thegraph.com/query/1756477/certiverf/version/latest";
 const REGISTRY_ADDR = "0x5416e493590141D710F367afA994F97A58116834";
 const CERT_ADDR = "0x30d5AEa8d649856a7f986d8D41DA314145Ecd6f5";
 const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/3RE7F8bPJ2MofC94L2tdP";
