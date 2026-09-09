@@ -10,6 +10,8 @@ const PAGE_URL = window.location.href.split("?")[0];
 // Used for cases like the NUC admin wallet being mistakenly approved as an institution;
 // once InstitutionRegistry.revokeInstitution() is deployed, this can be phased out in
 // favor of properly revoking the wallet on-chain instead of hiding it client-side.
+// Note: this is a lowercase array for easier comparison. 
+// Use of version latest of The Graph subgraph is required for this to work, as older versions may not have the wallet data in the events.
 const HIDDEN_WALLETS = [
     "0x44f586b4991b622fc44b31225aae0b85415efb6e" // NUC admin wallet, mistakenly self-approved as "University of Lagos"
 ];
