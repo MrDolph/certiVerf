@@ -233,6 +233,8 @@ Full-screen role selector on first visit. Three cards: Verify Certificate, Insti
 
 **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1756477/certiverf/v0.0.1`
 
+**GraphQL New Endpoint:** `https://api.studio.thegraph.com/query/1756477/certiverf/version/latest`
+
 Indexed entities: `RegistrationRequested`, `RegistrationApproved`, `CertificateIssued`, `CertificateRevoked`
 
 **Example query:**
