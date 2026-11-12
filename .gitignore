@@ -43,6 +43,8 @@ gas-report.json
 test-results/
 hardhat-test-results.txt
 hardhat-test-results-*.txt
+hardhat-v2_1-test-results.txt
+hardhat*.txt
 .nyc_output/
 
 # 5. The Graph generated and build outputs
@@ -122,6 +124,12 @@ scratch/
 *.zip
 *.7z
 *.rar
+
+# Generated inventory exports
+*-inventory.json
+
+# Local test certificates
+Test Certificates/
 
 # ============================================================
 # IMPORTANT: KEEP THESE TRACKED
