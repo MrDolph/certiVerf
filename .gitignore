@@ -148,3 +148,8 @@ Test Certificates/
 # contract ABIs needed by the frontend
 # research test scripts and reproducible datasets
 # ============================================================
+
+# Certiverf private institutional data
+/storage/
+/private/
+/audit-exports/
