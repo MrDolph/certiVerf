@@ -479,3 +479,135 @@ This project is developed as an academic thesis prototype at the National Open U
 ---
 
 *CertiVerf · Dawodu Fatai Olalekan · NOU234249189 · MSc CIT899 · NOUN Lagos Mainland I · 2026*
+
+
+
+# Certiverf Phase 4: additive V1-safe presented-PDF verification ## 12/11/2026 ##
+
+## Apply
+From `C:\DevCorner\certiverf` (back up existing files first):
+
+1. Copy `index.html` and `scripts.js` from this ZIP into the folder containing your existing `index.html` and `scripts.js` (the repository root in the supplied archive).
+2. Run a local static HTTP server, e.g. `npx --yes http-server . -p 8085 -c-1`.
+3. Open `http://localhost:8085` and use Public Verification.
+
+## Test
+- Enter a real *registered* V1 `metaHash`, upload the original registered PDF, and select Verify. Expect PDF MATCH only if its registered `docHash` is the same SHA-256.
+- Use the same `metaHash` with a modified PDF. Expect PDF MISMATCH.
+- Use a valid `metaHash` without PDF. The existing blockchain-only verification still works.
+- An unregistered metaHash must return not found; do not use a PDF SHA-256 as the metaHash.
+- For a certificate registered with placeholder or wrong docHash, the correct result is MISMATCH or INCONCLUSIVE, not MATCH.
+
+## Scope and limitations
+- Preserves original CSS, existing tabs, QR, result card and contract addresses.
+- Does not change Solidity contracts, deploy V2.1, integrate Pinata automatically, or upload presented PDFs to any backend.
+- Existing manual CID entry remains until secure server-side Pinata credentials are available.
+- Issuance now requires a PDF and recomputes SHA-256 at submission to avoid the prior hardcoded placeholder docHash.
+- The document check validates exact PDF bytes, not student identity or the truthfulness of institution claims.
+- `crypto.subtle` requires localhost or HTTPS.
+- V1's publicly stored student PII remains a separate privacy issue; use fictitious test data.
+
+## Suggested commit
+feat(certiverf): verify presented PDFs against V1 on-chain docHash while preserving portal UI
+
+==========================================================================================================================================================
+
+# Phase 4.1 — Correct combined verification verdict
+
+This is a **minimal logic-only correction** to the Phase 4 patch. It does not alter `index.html`, `styles.css`, Solidity contracts, wallet settings, or deployments.
+
+## Install
+1. Back up `C:\DevCorner\certiverf\scripts.js`.
+2. Replace only that file with `scripts.js` from this ZIP (in the folder containing your current `index.html`).
+3. Run `npx --yes http-server . -p 8085 -c-1` from the application directory, and hard-refresh the local page.
+
+## Expected results
+- Valid blockchain record + original matching PDF: `CERTIFICATE VERIFIED`.
+- Valid blockchain record + changed PDF: `DOCUMENT VERIFICATION FAILED` (with the PDF mismatch diagnostic).
+- Valid blockchain record + no PDF: `BLOCKCHAIN RECORD VALID` (PDF not checked).
+- Valid blockchain record + unusable docHash or hash-calculation error: `DOCUMENT VERIFICATION INCONCLUSIVE`.
+- Revoked blockchain record: `CERTIFICATE REVOKED`, regardless of PDF match.
+- Changing the PDF clears/hides the prior result until Verify is clicked again.
+
+## Validation
+`node --check scripts.js` passed. Browser/on-chain integration still requires local testing. No contract or IPFS changes.
+
+## Suggested commit
+`fix(verification): align overall certificate verdict with presented-PDF integrity`
+
+=========================================================================================================================================================
+
+# Certiverf Phase 4.2 — automatic Pinata upload (V1-safe)
+
+## Contents
+- `index.html` and `scripts.js`: full Phase 4.1-compatible frontend with minimal changes to existing issuance form; original `styles.css` unchanged.
+- `server.cjs`: localhost backend, Pinata JWT stays server-side.
+- `.env.example`: backend configuration. The existing project `package.json` is deliberately preserved.
+
+## Installation
+1. Back up `C:\DevCorner\certiverf\index.html` and `scripts.js`.
+2. Copy the files in this ZIP to `C:\DevCorner\certiverf` (do not delete existing files, `styles.css`, contracts, etc.).
+3. Run `cd C:\DevCorner\certiverf` then `npm install --no-save express@4 multer@1 ethers@6 dotenv@16`.
+4. Copy `.env.example` to `.env`. Set PINATA_JWT, AMOY_RPC_URL and the **deployed V1** InstitutionRegistry address (the same as REGISTRY_ADDR in scripts.js). Do not share JWT or commit .env.
+5. Stop the previous `http-server` on port 8085; run `node server.cjs`.
+6. Open `http://localhost:8085` and connect an **approved institution** wallet.
+7. Select a PDF, complete fields, click Issue Certificate. Sign the *upload challenge* first, wait for Pinata upload + retrieval check, then sign the **separate blockchain issuance transaction**.
+8. Verify the issued metaHash with the original PDF; then test a modified PDF and no-PDF lookup.
+
+## Important safeguards / limitations
+- No token in browser; server verifies signed challenge, SHA-256 and on-chain institution registration.
+- Upload succeeds only if the gateway returns identical bytes. Gateway propagation delay can cause an issuance stop; uploaded Pinata object may remain pinned. Retry if needed.
+- This **does not deploy V2.1** or modify the live V1 deployment. V1 contract still exposes plaintext student data on chain; use synthetic demo certificates only.
+- PDF is publicly retrievable by CID; do not upload private student data until encryption/access-control design is completed.
+- The backend is intended for **local controlled testing**, not production deployment. Before production add HTTPS, persistent nonce store, rate limiting, upload quotas, malware screening, logging policy and secret management.
+- A valid signed challenge authenticates a wallet, not the truth of a certificate's claims.
+- Original `styles.css` remains untouched; `stuIpfs` is read-only to avoid accidental CID/PDF mismatch.
+- Node 20+ required. If `npm install` conflicts with root Hardhat dependencies, install server dependencies in an isolated server package and adjust startup paths rather than forcing peer dependency overrides.
+
+=========================================================================================================================================================
+
+# Certiverf Phase 4.3 — Institutional IPFS Inventory (Stage 1)
+
+## Scope
+Incremental backend-only upgrade built on the Phase 4.2 server. **Does not replace your current `scripts.js`, `index.html`, or `styles.css`.** The original interface and working issuance remain unchanged.
+
+New uploads are tagged in Pinata metadata with an NUC-controlled `institution_code`, and recorded in a server-only JSONL inventory after the backend verifies retrieved IPFS PDF bytes against SHA-256. CLI tools list, export and independently download/hash-audit files by institution.
+
+**Important limitations:** This is a prototype operational inventory, not a fully governed production registry. It does NOT confirm that a blockchain issuance transaction succeeded; records are `uploaded_unconfirmed`. It does NOT automatically migrate to a second provider, synchronize pre-existing Pinata files, encrypt PDFs, or provide an NUC admin web dashboard. Do not use real student PDFs until privacy controls are implemented.
+
+## Install on Windows PowerShell
+
+1. Back up your working Certiverf folder (especially `server.cjs`, `.env`, and your current frontend).
+2. Extract ZIP; copy only `server.cjs`, `storage-inventory.cjs`, and `storage-admin.cjs` to `C:\DevCorner\certiverf`.
+3. Create `C:\DevCorner\certiverf\private` and copy `private\institutions.example.json` to `private\institutions.json`.
+4. Edit `private\institutions.json`: one entry per approved institution, with its actual V1 registered wallet. Example AFUT is a TEST mapping; update it if needed.
+5. Add to your existing `.env` (keep all existing credentials and RPC settings):
+   ```
+   CERTIVERF_INSTITUTIONS_FILE=./private/institutions.json
+   CERTIVERF_INVENTORY_FILE=./private/inventory.jsonl
+   ```
+6. Add `private/`, `.env`, and `audit-exports/` to `.gitignore`. Never commit wallet maps or inventories containing sensitive metadata.
+7. Stop your current server; restart from project root: `node server.cjs`.
+8. Upload a *synthetic* PDF through your unchanged institution portal. Backend checks that the wallet is registered on-chain and mapped to an institution; returns CID as before.
+9. In a separate PowerShell window:
+   ```
+   node storage-admin.cjs list AFUT
+   node storage-admin.cjs export AFUT afut-inventory.json
+   node storage-admin.cjs audit AFUT audit-exports/AFUT
+   ```
+   `audit` retrieves every matching CID and compares bytes/size/SHA-256; report at `audit-exports/AFUT/audit-manifest.json`. **This downloads local verified copies, not a second-provider migration.**
+
+## Operational safeguards
+- Backend derives institution code from NUC-controlled wallet map; client cannot supply it.
+- Pinata `pinataMetadata.keyvalues` includes only institution code, document hash and schema; **not student names, emails or IDs**.
+- Inventory appends only after gateway retrieval and SHA-256 verification.
+- Institution map and inventory blocked from HTTP static serving under `/private`.
+- Existing PDFs are not automatically inventoried; reconcile historic uploads separately.
+- JSONL append is suitable for a single local server process. For concurrent production servers, replace with a transactional database, uniqueness constraints, backup/restore and audit logs.
+- CID does not guarantee long-term availability. Audit regularly; add independent replica pinning in Stage 2.
+- Treat all public IPFS PDF contents as publicly retrievable, regardless of Pinata groups or metadata.
+
+## Next Stage (not included)
+- Receipt-confirmed inventory state (`issued`, `revoked`, `failed`), with idempotent reconciliation against Polygon Amoy.
+- NUC authenticated dashboard and provider-to-provider migration with verified repinning.
+- Backfill historic CIDs, encryption, retention/access policies, and multi-institution governance tests.

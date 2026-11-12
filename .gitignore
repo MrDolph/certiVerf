@@ -52,6 +52,10 @@ hardhat-test-results-*.txt
 **/.graph/
 **/subgraph.yaml.bak
 
+# 5.1 The Graph local development outputs
+private/
+audit-exports/
+
 # 6. Frontend build outputs
 dist/
 .next/

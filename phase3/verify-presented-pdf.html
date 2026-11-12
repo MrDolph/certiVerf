@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Certiverf — Presented PDF Integrity Lab</title>
+    <style>
+        body {
+            font: 16px system-ui, sans-serif;
+            background: #f4f7f9;
+            color: #142d3b;
+            max-width: 780px;
+            margin: 35px auto;
+            padding: 18px
+        }
+
+        main {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px #0001
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin: 18px 0 7px
+        }
+
+        input,
+        select,
+        button {
+            box-sizing: border-box;
+            font: inherit;
+            padding: 10px;
+            width: 100%
+        }
+
+        button {
+            background: #17644b;
+            color: white;
+            border: 0;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 18px
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            background: #eef2f4;
+            padding: 14px;
+            border-radius: 6px
+        }
+
+        .note {
+            color: #555
+        }
+
+        small {
+            display: block;
+            margin-top: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Certiverf — Presented PDF Integrity Lab</h1>
+        <p class="note">Local experimental tool. This page does not transmit PDF bytes. Do not use it as a production
+            credential-verification service.</p>
+        <label for="file">PDF actually presented by applicant</label><input type="file" id="file"
+            accept=".pdf,application/pdf">
+        <label for="expected">Registered SHA-256 document hash (32-byte hex)</label><input id="expected"
+            placeholder="0x + 64 hexadecimal characters" autocomplete="off" spellcheck="false">
+        <label for="status">Certificate's on-chain status (for controlled experiments)</label><select id="status">
+            <option value="unknown">Not independently checked</option>
+            <option value="valid">Valid — confirmed separately</option>
+            <option value="invalid">Revoked / flagged — confirmed separately</option>
+        </select>
+        <button id="check">Compare presented PDF with registered digest</button>
+        <pre id="output" role="status" aria-live="polite">Select a PDF and enter the registered digest.</pre>
+        <small>Hash match proves byte-for-byte identity with the registered digest only. It does not prove the issuer
+            was honest, the document holder is the graduate, or that a printed copy is authentic. Status selection is
+            manual, not a blockchain lookup.</small>
+    </main>
+    <script src="./pdf-integrity.js"></script>
+    <script>
+        document.getElementById('check').addEventListener('click', async () => {
+            const out = document.getElementById('output'); out.textContent = 'Calculating SHA-256 locally…';
+            try {
+                const file = document.getElementById('file').files[0]; const actual = await CertiverfPdfIntegrity.hashFile(file); const stored = CertiverfPdfIntegrity.normalizeDigest(document.getElementById('expected').value.trim()); const status = document.getElementById('status').value;
+                const result = CertiverfPdfIntegrity.assess(stored, actual, status === 'valid', status === 'valid' ? 0 : status === 'invalid' ? 1 : undefined);
+                out.textContent = `Outcome: ${result.outcome}\n${result.detail}\n\nPresented SHA-256: ${actual}\nRegistered SHA-256: ${stored}\nFile: ${file.name}\nSize: ${file.size} bytes\nOn-chain status: ${status} (manual selection)`;
+            } catch (e) { out.textContent = 'Cannot verify: ' + e.message; }
+        });</script>
+</body>
+
+</html>

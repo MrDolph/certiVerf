@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const { webcrypto, createHash } = require('node:crypto');
+const sandbox = { crypto: webcrypto };
+sandbox.globalThis = sandbox;
+vm.runInNewContext(fs.readFileSync(__dirname + '/pdf-integrity.js', 'utf8'), sandbox);
+const { hashFile, assess, normalizeDigest } = sandbox.CertiverfPdfIntegrity;
+const fakeFile = (buffer) => ({ size: buffer.length, arrayBuffer: async () => buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) });
+const sha = b => '0x' + createHash('sha256').update(b).digest('hex');
+(async () => {
+    const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
+    const modified = Buffer.from('%PDF-1.4\n1 0 obj\n<</X 1>>\nendobj\n%%EOF\n');
+    assert.equal(await hashFile(fakeFile(pdf)), sha(pdf));
+    assert.equal(assess(sha(pdf), sha(pdf), true, 0).outcome, 'MATCH');
+    assert.equal(assess(sha(pdf), await hashFile(fakeFile(modified)), true, 0).outcome, 'MISMATCH');
+    assert.equal(assess(sha(pdf), sha(pdf), false, 1).outcome, 'REVIEW');
+    assert.throws(() => normalizeDigest('0x1234'));
+    await assert.rejects(() => hashFile(fakeFile(Buffer.from('not a PDF'))));
+    await assert.rejects(() => hashFile(fakeFile(Buffer.alloc(0))));
+    console.log('7 Phase 3 module checks passed (synthetic PDF-like bytes; not real certificate experiments).');
+})().catch(e => { console.error(e); process.exitCode = 1 });

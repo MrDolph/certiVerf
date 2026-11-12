@@ -472,46 +472,272 @@ async function onPdf(input) {
     } catch (e) { console.error(e); }
 }
 
-async function doIssue() {
-    const name = document.getElementById("stuName").value.trim(),
-        id = document.getElementById("stuId").value.trim(),
-        prog = document.getElementById("stuProg").value.trim(),
-        cls = document.getElementById("stuClass").value,
-        yr = parseInt(document.getElementById("stuYear").value),
-        em = document.getElementById("stuEmail").value.trim(),
-        ipfs = document.getElementById("stuIpfs").value.trim();
-    if (!name || !id || !prog || !cls || !yr) { setSt("issueSt", "error", "Please fill in all required fields."); return; }
-    const dHash = computedDocHash || ethers.zeroPadValue("0x01", 32);
+
+
+async function doIssue(options = {}) {
+    const diagnostic = options?.diagnostic === true;
     const btn = document.getElementById("issueBtn");
+    const resultEl = document.getElementById("issueResult");
+    const ipfsField = document.getElementById("stuIpfs");
+
+    let stage = "validation";
+
+    function report(type, message) {
+        setSt("issueSt", type, message);
+        console.log(`[CERTIVERF][${type.toUpperCase()}] ${message}`);
+    }
+
+    function fail(message) {
+        report("error", message);
+        return {
+            success: false,
+            stage,
+            error: message,
+            transactionSubmitted: false
+        };
+    }
+
+    // Prevent simultaneous issuance attempts.
+    if (btn.disabled) {
+        return fail("Another certificate issuance is already in progress.");
+    }
+
+    const name = document.getElementById("stuName").value.trim();
+    const id = document.getElementById("stuId").value.trim();
+    const prog = document.getElementById("stuProg").value.trim();
+    const cls = document.getElementById("stuClass").value;
+    const yr = Number(document.getElementById("stuYear").value);
+    const em = document.getElementById("stuEmail").value.trim();
+    const pdf = document.getElementById("certPdf").files[0];
+
+    if (!name || !id || !prog || !cls ||
+        !Number.isInteger(yr) || yr <= 0) {
+        return fail("Complete all required certificate fields.");
+    }
+
+    if (!pdf) {
+        return fail("Select a certificate PDF before issuance.");
+    }
+
+    if (!signer) {
+        return fail("Connect your institution wallet first.");
+    }
+
+    if (!pdf.name.toLowerCase().endsWith(".pdf") ||
+        pdf.type && pdf.type !== "application/pdf") {
+        return fail("Only PDF certificate files are accepted.");
+    }
+
     btn.disabled = true;
-    document.getElementById("issueResult").style.display = "none";
-    setSt("issueSt", "pending", "Issuing certificate on Polygon Amoy blockchain...");
+    resultEl.style.display = "none";
+
+    let transactionSubmitted = false;
+    let transactionHash = null;
+
     try {
+        // STEP 1: Calculate PDF SHA-256.
+        stage = "pdf-hashing";
+        report("pending", "Calculating certificate SHA-256...");
+
+        const dHash = await sha256Pdf(pdf);
+
+        computedDocHash = dHash;
+
+        document.getElementById("docHashVal").textContent = dHash;
+        document.getElementById("docHashDiv").style.display = "block";
+
+        // STEP 2: Reuse an existing CID for the same PDF.
+        stage = "pinata-upload";
+
+        const cacheKey = `certiverf_pinata_${dHash.toLowerCase()}`;
+        let ipfs = sessionStorage.getItem(cacheKey);
+
+        if (ipfs && !/^Qm[1-9A-HJ-NP-Za-km-z]{44}$|^bafy[a-z2-7]+$/i.test(ipfs)) {
+            ipfs = null;
+        }
+
+        if (ipfs) {
+            report("pending", "Reusing previously uploaded Pinata CID...");
+        } else {
+            report(
+                "pending",
+                "Authenticating institution and uploading PDF to Pinata..."
+            );
+
+            const uploaded = await uploadCertificateToPinata(pdf, dHash);
+
+            if (!uploaded?.cid ||
+                uploaded.docHash?.toLowerCase() !== dHash.toLowerCase()) {
+                throw new Error("Pinata upload validation failed.");
+            }
+
+            ipfs = uploaded.cid;
+            sessionStorage.setItem(cacheKey, ipfs);
+        }
+
+        ipfsField.value = ipfs;
+
+        // STEP 3: Prepare the issuance transaction.
+        stage = "transaction-preparation";
+
         const cert = new ethers.Contract(CERT_ADDR, CERT_ABI, signer);
-        const tx = await cert.issueCertificate([name, id, prog, cls, BigInt(yr), em, dHash, ipfs || ""], { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 });
-        setSt("issueSt", "pending", "Transaction submitted — awaiting confirmation...");
+
+        const certificateData = [
+            name,
+            id,
+            prog,
+            cls,
+            BigInt(yr),
+            em,
+            dHash,
+            ipfs
+        ];
+
+        // STEP 4: Estimate gas using the actual certificate data.
+        stage = "gas-estimation";
+        report("pending", "Estimating blockchain gas. No transaction submitted...");
+
+        const estimatedGas =
+            await cert.issueCertificate.estimateGas(certificateData);
+
+        const gasLimit = (estimatedGas * 120n) / 100n;
+
+        const diagnosticResult = {
+            success: true,
+            stage: "gas-estimation",
+            estimatedGas: estimatedGas.toString(),
+            suggestedGasLimit: gasLimit.toString(),
+            pdfSHA256: dHash,
+            pinataCID: ipfs,
+            transactionSubmitted: false
+        };
+
+        console.table(diagnosticResult);
+
+        // DIAGNOSTIC MODE: stop safely before blockchain submission.
+        if (diagnostic) {
+            report(
+                "success",
+                `GAS DIAGNOSTIC SUCCESSFUL | ` +
+                `Estimated gas: ${estimatedGas} | ` +
+                `Suggested limit: ${gasLimit} | ` +
+                `No blockchain transaction submitted.`
+            );
+
+            return diagnosticResult;
+        }
+
+        // STEP 5: Submit transaction.
+        stage = "transaction-submission";
+
+        report(
+            "pending",
+            `Estimated gas: ${estimatedGas}. ` +
+            `Gas limit: ${gasLimit}. Confirm transaction in MetaMask...`
+        );
+
+        const tx = await cert.issueCertificate(
+            certificateData,
+            { gasLimit }
+        );
+
+        transactionSubmitted = true;
+        transactionHash = tx.hash;
+
+        stage = "transaction-confirmation";
+        report(
+            "pending",
+            `Transaction submitted: ${transactionHash}. Awaiting confirmation...`
+        );
+
         const receipt = await tx.wait();
+
+        if (!receipt || receipt.status !== 1) {
+            throw new Error("Certificate issuance transaction reverted.");
+        }
+
+        // STEP 6: Extract the certificate metadata hash.
+        stage = "receipt-processing";
+
         let mHash = "";
+
         for (const log of receipt.logs) {
             try {
-                const p = cert.interface.parseLog(log);
-                if (p && p.name === "CertificateIssued") { mHash = p.args.metaHash; break; }
-            } catch { }
+                const parsed = cert.interface.parseLog(log);
+
+                if (parsed?.name === "CertificateIssued") {
+                    mHash = parsed.args.metaHash;
+                    break;
+                }
+            } catch {
+                // Ignore unrelated contract logs.
+            }
         }
-        setSt("issueSt", "success", "Certificate issued and permanently stored on the blockchain.");
-        document.getElementById("issuedHash").textContent = mHash;
+
+        document.getElementById("issuedHash").textContent =
+            mHash || "Event hash not found; inspect transaction receipt.";
+
+        // STEP 7: Generate verification QR.
+        const issueQR = document.getElementById("issueQR");
+        issueQR.style.display = "none";
+
         if (mHash) {
-            const link = PAGE_URL + "?hash=" + mHash;
-            // FIX 3: QR with error fallback
+            const verificationLink = PAGE_URL + "?hash=" + mHash;
             const issueQREl = document.getElementById("issueQRImg");
-            issueQREl.src = qrUrl(link);
-            issueQREl.onerror = () => { document.getElementById("issueQR").style.display = "none"; };
-            document.getElementById("issueQR").style.display = "flex";
+
+            issueQREl.onerror = () => {
+                issueQR.style.display = "none";
+            };
+
+            issueQREl.src = qrUrl(verificationLink);
+            issueQR.style.display = "flex";
         }
-        document.getElementById("issueResult").style.display = "block";
+
+        resultEl.style.display = "block";
+
+        report(
+            "success",
+            "CERTIFICATE ISSUED SUCCESSFULLY. " +
+            `Transaction: ${transactionHash}`
+        );
+
+        return {
+            success: true,
+            stage: "completed",
+            metaHash: mHash,
+            pdfSHA256: dHash,
+            pinataCID: ipfs,
+            transactionHash,
+            estimatedGas: estimatedGas.toString(),
+            gasLimit: gasLimit.toString(),
+            transactionSubmitted: true
+        };
+
+    } catch (error) {
+        console.error(`[CERTIVERF][${stage}]`, error);
+
+        const message =
+            error.shortMessage ||
+            error.reason ||
+            error.message ||
+            "Unknown certificate issuance error.";
+
+        report("error", `${stage.toUpperCase()} FAILED: ${message}`);
+
+        return {
+            success: false,
+            stage,
+            error: message,
+            transactionSubmitted,
+            transactionHash
+        };
+
+    } finally {
         btn.disabled = false;
-    } catch (e) { setSt("issueSt", "error", e.reason || e.message); btn.disabled = false; }
+    }
 }
+
+
 
 async function doRevoke() {
     const h = document.getElementById("revokeHash").value.trim(), r = document.getElementById("revokeReason").value.trim();
@@ -756,9 +982,71 @@ async function doLookup() {
     } catch (e) { out.innerHTML = `<p style="font-size:.82rem;color:var(--revoked)">Error: ${e.message}</p>`; }
 }
 
+
+// Phase 4: Compare a presented PDF to the registered on-chain document digest.
+// This check works with the deployed V1 contract and does not fetch the IPFS copy.
+function clearPdfVerification() {
+    const outcome = document.getElementById("pdfVerifyOutcome");
+    if (outcome) { outcome.className = "tx-st"; outcome.textContent = ""; }
+    // An uploaded PDF change invalidates the previous combined verdict.
+    const card = document.getElementById("certCard");
+    if (card) card.style.display = "none";
+}
+
+function setVerificationHero(kind) {
+    const hero = document.getElementById("certHero");
+    const states = {
+        verified: ["🛡️", "CERTIFICATE VERIFIED", "The blockchain record is valid and the presented PDF matches its registered SHA-256.", true],
+        record: ["ℹ️", "BLOCKCHAIN RECORD VALID", "This certificate record is valid on Polygon Amoy. No presented PDF was checked.", true],
+        mismatch: ["🚫", "DOCUMENT VERIFICATION FAILED", "The blockchain record is valid, but the presented PDF differs from the registered document. Do not accept this PDF as verified.", false],
+        inconclusive: ["⚠️", "DOCUMENT VERIFICATION INCONCLUSIVE", "The presented PDF could not be authenticated against a usable on-chain document hash.", false],
+        revoked: ["🚫", "CERTIFICATE REVOKED", "This certificate has been revoked by the issuing institution.", false]
+    };
+    const [icon, title, detail, positive] = states[kind];
+    const css = positive ? "valid" : "revoked";
+    hero.innerHTML = `<span class="shield-icon shield-${css}">${icon}</span><div class="result-title ${css}">${title}</div><div class="result-sub">${detail}</div>`;
+}
+
+async function sha256Pdf(file) {
+    if (!file || !file.name.toLowerCase().endsWith(".pdf")) throw new Error("Select a PDF file.");
+    if (!file.size) throw new Error("The PDF is empty.");
+    const bytes = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return "0x" + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyPresentedPdf(c) {
+    const file = document.getElementById("verifyPdf")?.files?.[0];
+    if (!file) return; // Legacy hash-only verification remains available.
+    const out = document.getElementById("pdfVerifyOutcome");
+    out.className = "tx-st show tx-pending";
+    out.textContent = "Calculating presented PDF fingerprint...";
+    try {
+        const actual = await sha256Pdf(file);
+        const registered = String(c.docHash || "").toLowerCase();
+        if (!/^0x[0-9a-f]{64}$/.test(registered) || /^0x0{64}$/.test(registered)) {
+            if (c.isValid) setVerificationHero("inconclusive");
+            out.className = "tx-st show tx-error";
+            out.textContent = "INCONCLUSIVE: This blockchain record has no usable registered PDF fingerprint. PDF integrity cannot be established.";
+            return;
+        }
+        const matched = actual === registered;
+        setVerificationHero(!c.isValid ? "revoked" : matched ? "verified" : "mismatch");
+        out.className = "tx-st show " + (matched ? "tx-success" : "tx-error");
+        out.textContent = (matched ? "PDF MATCH: Presented PDF bytes match the on-chain docHash." : "PDF MISMATCH: Presented PDF differs from the registered document.") +
+            " Presented SHA-256: " + actual + " | Registered SHA-256: " + registered +
+            " | Certificate status: " + (c.isValid ? "valid" : "revoked") + ".";
+    } catch (e) {
+        if (c.isValid) setVerificationHero("inconclusive");
+        out.className = "tx-st show tx-error";
+        out.textContent = "PDF integrity check failed: " + e.message;
+    }
+}
+
 async function runVerify() {
     const hash = document.getElementById("verifyHash").value.trim();
     document.getElementById("certCard").style.display = "none";
+    clearPdfVerification();
     if (!hash.startsWith("0x") || hash.length !== 66) { setSt("verifySt", "error", "Enter a valid certificate hash — starts with 0x, exactly 66 characters."); return; }
     const btn = document.getElementById("verifyBtn"); btn.disabled = true;
     setSt("verifySt", "pending", "Querying Polygon Amoy blockchain...");
@@ -768,6 +1056,7 @@ async function runVerify() {
         const c = await cert.verifyCertificate(hash);
         clrSt("verifySt");
         showResult(c, hash);
+        await verifyPresentedPdf(c);
     } catch (e) {
         let msg = e.message || "Unknown error";
         if (msg.includes("Certificate not found")) msg = "No certificate found for this hash. Please check and try again.";
@@ -777,13 +1066,15 @@ async function runVerify() {
 
 function clearResult() {
     document.getElementById("verifyHash").value = "";
+    document.getElementById("verifyPdf").value = "";
+    clearPdfVerification();
     document.getElementById("certCard").style.display = "none";
     clrSt("verifySt");
 }
 
 function showResult(c, hash) {
     const valid = c.isValid;
-    document.getElementById("certHero").innerHTML = `<span class="shield-icon ${valid ? "shield-valid" : "shield-revoked"}">${valid ? "🛡️" : "🚫"}</span><div class="result-title ${valid ? "valid" : "revoked"}">${valid ? "CERTIFICATE VALID" : "CERTIFICATE REVOKED"}</div><div class="result-sub">${valid ? "This certificate has been verified as authentic on the Polygon Amoy blockchain." : "This certificate has been revoked by the issuing institution."}</div>`;
+    setVerificationHero(valid ? "record" : "revoked");
     document.getElementById("certFields").innerHTML = `
     <div class="cf"><div class="cf-lbl">Student Name</div><div class="cf-val">${c.studentName}</div></div>
     <div class="cf"><div class="cf-lbl">Student ID</div><div class="cf-val">${c.studentId}</div></div>
@@ -948,4 +1239,27 @@ function exportStatsCSV() {
             return [a.name, website, a.wallet, fmtDate(a.timestamp), certs.length, revoked, certs.length - revoked];
         })
     );
+}
+// Phase 4.2: authenticated, server-mediated IPFS upload.
+// No Pinata token is ever sent to the browser.
+async function uploadCertificateToPinata(file, expectedHash) {
+    if (!signer) throw new Error("Connect your approved institution wallet first.");
+    const challengeResponse = await fetch("/api/pinata/challenge", { cache: "no-store" });
+    if (!challengeResponse.ok) throw new Error("Secure Pinata service unavailable. Start the Phase 4.2 server.");
+    const challenge = await challengeResponse.json();
+    const address = await signer.getAddress();
+    const message = `Certiverf Pinata upload\nWallet: ${address}\nNonce: ${challenge.nonce}\nDocument SHA-256: ${expectedHash}`;
+    const signature = await signer.signMessage(message);
+    const body = new FormData();
+    body.append("file", file, file.name);
+    body.append("address", address);
+    body.append("nonce", challenge.nonce);
+    body.append("signature", signature);
+    body.append("docHash", expectedHash);
+    const response = await fetch("/api/pinata/upload", { method: "POST", body });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Pinata upload failed.");
+    if (result.docHash?.toLowerCase() !== expectedHash.toLowerCase() || !result.cid)
+        throw new Error("Upload result did not match the selected PDF.");
+    return result;
 }
