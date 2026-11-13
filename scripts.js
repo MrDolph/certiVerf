@@ -42,6 +42,7 @@ const CERT_ABI = [
 ];
 
 let provider, signer, userAddress, isOwner = false, isReg = false, instData = null, computedDocHash = null;
+let nucSessionToken = null;
 
 const short = a => a ? a.slice(0, 6) + "..." + a.slice(-4) : "";
 const fmtDate = u => {
@@ -267,6 +268,8 @@ function disconnectWallet() {
     signer = null;
     userAddress = null;
     isOwner = false;
+    nucSessionToken = null;
+    document.getElementById("nucStorageCard").style.display = "none";
     isReg = false;
     instData = null;
     document.getElementById("walletPill").classList.remove("show");
@@ -329,68 +332,81 @@ function showAdmin() {
     document.getElementById("adminContent").style.display = "block";
     document.getElementById("regInstCard").style.display = "block";
     document.getElementById("statsCard").style.display = "block";
+    document.getElementById("nucStorageCard").style.display = "block";
     loadPending();
     loadRegistered();
     loadStats();
 }
 
+function nucEscape(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+function nucSafeUrl(value) {
+    try { const u = new URL(String(value || "")); return ["https:","http:"].includes(u.protocol) ? u.href : null; }
+    catch { return null; }
+}
+function nucDetails(wallet) {
+    const d = (window._regData || []).find(r => r.wallet.toLowerCase() === String(wallet).toLowerCase());
+    const box = document.getElementById("nucInstitutionDetails");
+    if (!d || !box) return;
+    const url = nucSafeUrl(d.website);
+    box.hidden = false;
+    box.innerHTML = `<div class="card-hdr"><div><h2>${nucEscape(d.name)}</h2><p>Institution profile · V1 registry</p></div><button type="button" class="btn btn-ghost btn-sm" id="nucCloseDetails">Close</button></div>
+      <div class="card-body"><div class="cert-grid">
+      <div class="cf"><div class="cf-lbl">Acronym</div><div class="cf-val">${nucEscape(d.acronym)}</div></div>
+      <div class="cf"><div class="cf-lbl">Live registry status</div><div class="cf-val">${d.registered ? "Registered" : "Not registered"}</div></div>
+      <div class="cf full"><div class="cf-lbl">Institution wallet</div><div class="cf-val mono">${nucEscape(d.wallet)}</div></div>
+      <div class="cf"><div class="cf-lbl">Registration date</div><div class="cf-val">${nucEscape(fmtDate(d.registrationTime || d.timestamp))}</div></div>
+      <div class="cf"><div class="cf-lbl">Website</div><div class="cf-val">${url ? `<a href="${nucEscape(url)}" target="_blank" rel="noopener noreferrer">${nucEscape(d.website)}</a>` : nucEscape(d.website || "Not supplied")}</div></div>
+      </div><p class="nuc-note">V1 registry status is read directly from the contract. Suspension, reinstatement, institution revocation and wallet rotation require a deployed V2.1 governance integration. No such action is available here.</p></div>`;
+    document.getElementById("nucCloseDetails").addEventListener("click", () => { box.hidden = true; box.innerHTML = ""; });
+    box.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
 async function loadRegistered() {
     const el = document.getElementById("registeredList");
-    el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Loading from The Graph...</p></div>`;
+    el.innerHTML = `<div class="empty"><span class="ei spin">⟳</span><p>Checking indexed history and live registry...</p></div>`;
     try {
-        const query = `{
-            registrationApproveds(orderBy: timestamp, orderDirection: asc) {
-                wallet
-                name
-                timestamp
+        const query = `{ registrationApproveds(first:1000, orderBy:timestamp, orderDirection:asc) { wallet name timestamp } }`;
+        const res = await fetch(GRAPH_URL, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({query})});
+        if (!res.ok) throw new Error("Institution history request failed");
+        const payload = await res.json();
+        if (payload.errors?.length) throw new Error(payload.errors[0].message);
+        if (!payload.data) throw new Error("Institution history is unavailable");
+        const latest = new Map();
+        for (const e of payload.data.registrationApproveds || []) {
+            if (ethers.isAddress(e.wallet) && !HIDDEN_WALLETS.includes(e.wallet.toLowerCase())) {
+                latest.set(e.wallet.toLowerCase(), e);
             }
-        }`;
-        const res = await fetch(GRAPH_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query })
-        });
-        const jsonReg = await res.json();
-        if (jsonReg.errors) throw new Error(jsonReg.errors[0].message);
-        const events = (jsonReg.data ? jsonReg.data.registrationApproveds : [])
-            .filter(e => !HIDDEN_WALLETS.includes(e.wallet.toLowerCase()));
-        if (!events || !events.length) {
-            el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No registered institutions yet.</p></div>`;
-            return;
         }
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, provider);
-        let rows = "";
-        const fullData = [];
-        for (const ev of events) {
+        const records = await Promise.all([...latest.values()].map(async ev => {
             try {
-                const d = await reg.getInstitution(ev.wallet);
-                fullData.push({ name: d[0], acronym: d[1], website: d[2], wallet: ev.wallet, timestamp: ev.timestamp });
-                rows += `<tr>
-                    <td><strong>${d[0]}</strong></td>
-                    <td>${d[1]}</td>
-                    <td><a href="${d[2]}" target="_blank" rel="noopener" style="color:var(--g600);font-size:.82rem">${d[2]}</a></td>
-                    <td style="font-family:monospace;font-size:.68rem;color:var(--n400)">${ev.wallet.slice(0, 10)}...${ev.wallet.slice(-6)}</td>
-                    <td><span class="badge b-green" style="font-size:.65rem">✓ Active</span></td>
-                </tr>`;
-            } catch { continue; }
-        }
-        if (!rows) {
-            el.innerHTML = `<div class="empty"><span class="ei">🏛️</span><p>No active institutions found.</p></div>`;
-            return;
-        }
-        // Store for CSV
-        window._regData = fullData;
-        el.innerHTML = `
-            <div style="display:flex;justify-content:flex-end;padding:12px 16px 0">
-                <button class="btn btn-ghost btn-sm" onclick="exportRegCSV()">⬇ Export CSV</button>
-            </div>
-            <div style="overflow-x:auto">
-            <table class="hist-tbl">
-                <thead><tr><th>Institution</th><th>Acronym</th><th>Website</th><th>Wallet</th><th>Status</th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table></div>`;
+                const registered = await reg.isRegistered(ev.wallet);
+                let d = null;
+                try { d = await reg.getInstitution(ev.wallet); } catch { /* historical entry may no longer be registered */ }
+                return {wallet:ev.wallet, name:d?.[0] || ev.name || "Unknown institution", acronym:d?.[1] || "—", website:d?.[2] || "", registrationTime:d?.[3] || 0, timestamp:ev.timestamp, registered};
+            } catch { return {wallet:ev.wallet,name:ev.name || "Unknown institution",acronym:"—",website:"",timestamp:ev.timestamp,registered:null}; }
+        }));
+        window._regData = records;
+        const active = records.filter(r => r.registered === true).length;
+        const unknown = records.filter(r => r.registered === null).length;
+        const excludedLegacy = (payload.data.registrationApproveds || []).filter(e => ethers.isAddress(e.wallet) && HIDDEN_WALLETS.includes(e.wallet.toLowerCase())).length;
+        const rows = records.map(d => {
+            const url = nucSafeUrl(d.website);
+            const badge = d.registered === true ? '<span class="badge b-green">✓ Registered</span>' : d.registered === false ? '<span class="badge b-gray">Not registered</span>' : '<span class="badge b-amber">Status unavailable</span>';
+            return `<tr><td><strong>${nucEscape(d.name)}</strong></td><td>${nucEscape(d.acronym)}</td><td>${url ? `<a href="${nucEscape(url)}" target="_blank" rel="noopener noreferrer">${nucEscape(d.website)}</a>` : nucEscape(d.website || "—")}</td><td class="mono-sm">${nucEscape(short(d.wallet))}</td><td>${badge}</td><td><button type="button" class="btn btn-ghost btn-sm nuc-view-inst" data-wallet="${nucEscape(d.wallet)}">View</button></td></tr>`;
+        }).join("");
+        el.innerHTML = `<div class="nuc-directory-summary"><strong>${active}</strong> currently registered · ${records.length} historical approvals${unknown ? ` · ${unknown} status checks unavailable` : ""}</div>
+          <div class="nuc-directory-tools"><input id="nucInstitutionSearch" type="search" aria-label="Search institutions" placeholder="Search institution, acronym or wallet"><button class="btn btn-ghost btn-sm" onclick="exportRegCSV()">⬇ Export CSV</button></div>
+          <div style="overflow-x:auto"><table class="hist-tbl"><thead><tr><th>Institution</th><th>Acronym</th><th>Website</th><th>Wallet</th><th>V1 status</th><th>Details</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No indexed approvals found.</td></tr>'}</tbody></table></div>
+          <p class="nuc-note">Historical approvals come from The Graph (first 1,000 events); registration status is checked live on V1. ${excludedLegacy ? `${excludedLegacy} legacy NUC-wallet approval event(s) excluded from the ordinary directory and CSV (display-only; on-chain authorization unchanged). ` : ""}This is not a complete V2.1 governance directory.</p>`;
+        el.querySelectorAll(".nuc-view-inst").forEach(btn => btn.addEventListener("click", () => nucDetails(btn.dataset.wallet)));
+        document.getElementById("nucInstitutionSearch").addEventListener("input", e => {
+            const term = e.target.value.trim().toLowerCase();
+            el.querySelectorAll("tbody tr").forEach(row => { row.hidden = !row.textContent.toLowerCase().includes(term) && !(row.querySelector("[data-wallet]")?.dataset.wallet || "").toLowerCase().includes(term); });
+        });
     } catch (e) {
-        el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>${e.message}</p></div>`;
+        el.innerHTML = `<div class="empty"><span class="ei">⚠️</span><p>Unable to load institution directory: ${nucEscape(e.message)}</p></div>`;
     }
 }
 
@@ -399,8 +415,8 @@ function exportRegCSV() {
     if (!data.length) return;
     downloadCSV(
         "certiverf_registered_institutions.csv",
-        ["Institution", "Acronym", "Website", "Wallet", "Registered"],
-        data.map(ev => [ev.name || "", ev.acronym || "", ev.website || "", ev.wallet, fmtDate(ev.timestamp)])
+        ["Institution", "Acronym", "Website", "Wallet", "V1 status", "Registered"],
+        data.map(ev => [ev.name || "", ev.acronym || "", ev.website || "", ev.wallet, ev.registered === true ? "Registered" : ev.registered === false ? "Not registered" : "Unavailable", fmtDate(ev.registrationTime || ev.timestamp)])
     );
 }
 
@@ -880,15 +896,11 @@ async function loadPending() {
         if (!json.data) throw new Error("No data returned from The Graph");
 
         const requested = json.data.registrationRequesteds || [];
-        const decided = new Set([
-            ...(json.data.registrationApproveds || []).map(e => e.wallet.toLowerCase()),
-            ...(json.data.registrationRejecteds || []).map(e => e.wallet.toLowerCase())
-        ]);
-
-        // Dedupe requests per wallet (keep latest request if someone re-applied), then drop anyone already approved/rejected
-        const byWallet = {};
-        for (const r of requested) byWallet[r.wallet.toLowerCase()] = r;
-        const candidates = Object.values(byWallet).filter(r => !decided.has(r.wallet.toLowerCase()));
+        // Historical rejection/approval events do not prove current pending state.
+        // Deduplicate by wallet; the contract is authoritative for pending requests.
+        const byWallet = new Map();
+        for (const r of requested) if (ethers.isAddress(r.wallet)) byWallet.set(r.wallet.toLowerCase(), r);
+        const candidates = [...byWallet.values()];
 
         if (candidates.length === 0) {
             list.innerHTML = `<div class="empty"><span class="ei">✅</span><p>No pending applications at this time.</p></div>`;
@@ -905,7 +917,10 @@ async function loadPending() {
             if (!stillPending) continue;
             shownAny = true;
             const el = document.createElement("div"); el.className = "pend-row";
-            el.innerHTML = `<div class="pend-info"><h3>${item.name} <span style="font-weight:400;color:var(--n500)">(${item.acronym})</span></h3>${web ? `<p>${web}</p>` : ""}<div class="pend-addr">${item.wallet}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm" onclick="doApprove('${item.wallet}','${item.name}')">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="doReject('${item.wallet}','${item.name}')">✗ Reject</button></div>`;
+            el.innerHTML = `<div class="pend-info"><h3>${nucEscape(item.name)} <span style="font-weight:400;color:var(--n500)">(${nucEscape(item.acronym)})</span></h3>${web ? `<p>${nucEscape(web)}</p>` : ""}<div class="pend-addr">${nucEscape(item.wallet)}</div></div><div class="pend-acts"><button class="btn btn-green btn-sm">✓ Approve</button><button class="btn btn-danger btn-sm">✗ Reject</button></div>`;
+            const buttons = el.querySelectorAll(".pend-acts button");
+            buttons[0].addEventListener("click", () => doApprove(item.wallet, item.name));
+            buttons[1].addEventListener("click", () => doReject(item.wallet, item.name));
             list.appendChild(el);
         }
         if (!shownAny) {
@@ -920,7 +935,7 @@ async function doApprove(addr, name) {
     setSt("adminSt", "pending", `Approving ${name}...`);
     try {
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
-        const tx = await reg.approveRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 500000 });
+        const tx = await reg.approveRegistration(addr);
         setSt("adminSt", "pending", "Awaiting confirmation...");
         await tx.wait();
         const lsApp = JSON.parse(localStorage.getItem("cv_approved") || "[]");
@@ -938,7 +953,7 @@ async function doReject(addr, name) {
     setSt("adminSt", "pending", `Rejecting ${name}...`);
     try {
         const reg = new ethers.Contract(REGISTRY_ADDR, REG_ABI, signer);
-        const tx = await reg.rejectRegistration(addr, { maxPriorityFeePerGas: ethers.parseUnits('65', 'gwei'), maxFeePerGas: ethers.parseUnits('70', 'gwei'), gasLimit: 300000 });
+        const tx = await reg.rejectRegistration(addr);
         await tx.wait();
         setSt("adminSt", "success", `${name} rejected.`);
         await loadPending();
@@ -1262,4 +1277,55 @@ async function uploadCertificateToPinata(file, expectedHash) {
     if (result.docHash?.toLowerCase() !== expectedHash.toLowerCase() || !result.cid)
         throw new Error("Upload result did not match the selected PDF.");
     return result;
+}
+
+
+// Phase 4.4.1 — authenticated read-only monitoring inside the existing NUC tab.
+async function loadNucStorage() {
+    const target = document.getElementById('nucStorageContent');
+    if (!isOwner || !signer) { target.textContent = 'Connect the NUC contract-owner wallet first.'; return; }
+    target.textContent = 'Authenticating and loading institutional inventory…';
+    try {
+        async function fetchOverview() {
+            return fetch('/api/nuc/storage-overview', {headers:{Authorization:`Bearer ${nucSessionToken}`}, cache:'no-store'});
+        }
+        let response = nucSessionToken ? await fetchOverview() : {status:401};
+        if (response.status === 401) {
+            const challengeResponse = await fetch('/api/nuc/challenge', {cache:'no-store'});
+            if (!challengeResponse.ok) throw new Error('NUC API unavailable. Run Certiverf through the local Node server.');
+            const challenge = await challengeResponse.json();
+            const signature = await signer.signMessage(challenge.message);
+            const sessionResponse = await fetch('/api/nuc/session', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({nonce:challenge.nonce,signature})
+            });
+            if (!sessionResponse.ok) throw new Error('Admin wallet authentication rejected.');
+            nucSessionToken = (await sessionResponse.json()).token;
+            response = await fetchOverview();
+        }
+        if (!response.ok) throw new Error('Unable to load institutional storage statistics.');
+        const data = await response.json();
+        target.replaceChildren();
+        const summary = document.createElement('p');
+        summary.textContent = `Inventory records: ${data.totalInventoryRecords} · Uploads awaiting on-chain confirmation: ${data.uploadedUnconfirmed} · Reconciled: ${data.reconciledRecords} · Invalid inventory rows: ${data.malformedRows}`;
+        target.appendChild(summary);
+        const table = document.createElement('table'); table.className = 'hist-tbl';
+        const head = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        for (const title of ['Institution code','Inventory records']) {
+            const th=document.createElement('th'); th.textContent=title; headerRow.appendChild(th);
+        }
+        head.appendChild(headerRow); table.appendChild(head);
+        const body=document.createElement('tbody');
+        for (const institution of data.institutions) {
+            const row=document.createElement('tr');
+            for (const value of [institution.code,institution.records]) {
+                const cell=document.createElement('td'); cell.textContent=String(value); row.appendChild(cell);
+            }
+            body.appendChild(row);
+        }
+        table.appendChild(body); target.appendChild(table);
+        const note=document.createElement('p'); note.style.marginTop='12px';
+        note.textContent=data.note; target.appendChild(note);
+    } catch(error) { target.textContent=error.message || 'Storage overview failed.'; }
 }
