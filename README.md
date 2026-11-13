@@ -611,3 +611,44 @@ New uploads are tagged in Pinata metadata with an NUC-controlled `institution_co
 - Receipt-confirmed inventory state (`issued`, `revoked`, `failed`), with idempotent reconciliation against Polygon Amoy.
 - NUC authenticated dashboard and provider-to-provider migration with verified repinning.
 - Backfill historic CIDs, encryption, retention/access policies, and multi-institution governance tests.
+
+
+=====================
+# Certiverf Phase 4.4.1 — integrated NUC storage monitoring
+
+This patch **does not add a separate page**. It extends the existing `pane-admin` in `index.html`, preserving the existing role selection, NUC institution approval, issuance and verification flows.
+
+## Apply (Windows Git Bash)
+
+1. Back up your current `index.html`, `scripts.js`, and `server.cjs` (or commit them before applying).
+2. Copy the three files from this ZIP into `C:\DevCorner\certiverf` and overwrite the matching originals. Do not replace any other files.
+3. Run `node --check server.cjs` and `node --check scripts.js`.
+4. Start the existing local server with `node server.cjs` and open `http://127.0.0.1:8085/`.
+5. Choose **NUC Admin**, connect the InstitutionRegistry contract-owner wallet, then click **Refresh** on **Institutional Storage Monitoring**. MetaMask prompts for a one-time authentication signature.
+6. Verify existing certificate issuance and verification before committing.
+
+## Security / limitations
+
+- The API verifies a wallet-signed, single-use challenge against the on-chain InstitutionRegistry owner, and requires an expiring bearer session. Tokens are in-memory only and are not saved to browser storage.
+- This is a read-only local prototype, not production authentication. Use HTTPS and production-grade rate limiting, persistence and auditing before deployment.
+- This page reports **inventory records**, not confirmed blockchain issuance counts. It does not display student names, PDF hashes, CIDs or certificate content.
+- Existing `storage/` and `private/` are never modified by this patch.
+- For safety, the server blocks direct static access to storage directories and administrative `.cjs` source files. Review broader static serving before exposing this server publicly.
+- The backend uses `INSTITUTION_REGISTRY_ADDRESS` and `AMOY_RPC_URL` from `.env`. These must match the contract and chain used by `scripts.js`.
+
+
+==================
+# Certiverf Phase 4.4.2 — safe directory enhancement
+
+Changes: searchable registered institution directory, live V1 registration checks, details view, pending reapplication handling, escaped institution names/websites, removal of fixed gas fees on approval/rejection. Existing NUC portal and design preserved. No V2.1 transaction controls are activated. No server.cjs change.
+
+## Install (Git Bash)
+Extract this ZIP to a separate folder. Run `bash patches/install-phase442.sh` from that extracted folder. The installer targets `/c/DevCorner/certiverf`, verifies SHA-256 of all three source files, creates a backup, and refuses to overwrite modified baselines.
+
+## Validate
+`node --check scripts.js`
+`npx hardhat test`
+Open the existing NUC dashboard, connect owner wallet, refresh registered institutions, test search/details and pending applications. Verify existing certificate issuance and public verification remain operational. Do not commit/deploy until browser checks pass.
+
+## Limitations
+The Graph first 1,000 approval/request events; not exhaustive pagination. V1 only provides registration status, not suspension/revocation state. Pending applications rely on indexed requests plus live `getPendingInstitution` checks. Existing other HTML rendering paths are not comprehensively security-audited. No deployed V2.1 integration or on-chain deployment.

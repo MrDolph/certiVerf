@@ -85,6 +85,71 @@ app.post('/api/pinata/upload', uploader.single('file'), async (req,res) => {
     res.json({cid:data.IpfsHash,docHash:digest,size:req.file.size,institutionCode:institution.code});
   } catch(e) { console.error('Upload error:',e.message);res.status(502).json({error:'Upload verification failed; no blockchain transaction submitted.'}); }
 });
+// Phase 4.4.1: read-only NUC storage overview, protected by on-chain owner wallet proof.
+const adminChallenges = new Map();
+const adminSessions = new Map();
+const adminRegistry = new ethers.Contract(REG, ['function owner() view returns (address)'], provider);
+const ADMIN_TTL = 15 * 60 * 1000;
+function pruneAdmin() {
+  const now = Date.now();
+  for (const [key, val] of adminChallenges) if (val.expires <= now) adminChallenges.delete(key);
+  for (const [key, val] of adminSessions) if (val.expires <= now) adminSessions.delete(key);
+}
+app.get('/api/nuc/challenge', async (req,res) => {
+  pruneAdmin();
+  const nonce = crypto.randomBytes(24).toString('hex');
+  adminChallenges.set(nonce, { expires: Date.now() + 120000 });
+  res.json({ nonce, message: `Certiverf NUC read-only dashboard access\nNonce: ${nonce}` });
+});
+app.post('/api/nuc/session', express.json({limit:'4kb'}), async (req,res) => {
+  try {
+    pruneAdmin();
+    const {nonce, signature} = req.body || {};
+    const challenge = adminChallenges.get(nonce);
+    adminChallenges.delete(nonce);
+    if (!challenge || challenge.expires <= Date.now() || typeof signature !== 'string') return res.sendStatus(401);
+    const message = `Certiverf NUC read-only dashboard access\nNonce: ${nonce}`;
+    const wallet = ethers.verifyMessage(message, signature);
+    const owner = await adminRegistry.owner();
+    if (wallet.toLowerCase() !== owner.toLowerCase()) return res.sendStatus(403);
+    const token = crypto.randomBytes(32).toString('hex');
+    adminSessions.set(token, { wallet: wallet.toLowerCase(), expires: Date.now() + ADMIN_TTL });
+    res.json({ token, expiresInSeconds: ADMIN_TTL / 1000 });
+  } catch(e) { res.status(401).json({error:'NUC wallet authentication failed.'}); }
+});
+app.get('/api/nuc/storage-overview', async (req,res) => {
+  try {
+    pruneAdmin();
+    const auth = /^Bearer ([0-9a-f]{64})$/.exec(req.get('authorization') || '');
+    const session = auth && adminSessions.get(auth[1]);
+    if (!session || session.expires <= Date.now()) return res.sendStatus(401);
+    // Revalidate owner to ensure wallet rotation immediately revokes access.
+    const owner = await adminRegistry.owner();
+    if (session.wallet !== owner.toLowerCase()) { adminSessions.delete(auth[1]); return res.sendStatus(403); }
+    const { inventoryFile } = require('./storage-inventory.cjs');
+    const counts = new Map(); let total = 0, unconfirmed = 0, reconciled = 0, malformed = 0;
+    if (fs.existsSync(inventoryFile)) {
+      for (const line of fs.readFileSync(inventoryFile,'utf8').split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        try {
+          const r = JSON.parse(line);
+          if (typeof r.institutionCode !== 'string' || !/^[A-Z0-9_-]{2,24}$/.test(r.institutionCode)) { malformed++; continue; }
+          total++;
+          if (r.status === 'uploaded_unconfirmed') unconfirmed++;
+          if (String(r.status || '').toLowerCase().includes('reconcil')) reconciled++;
+          counts.set(r.institutionCode, (counts.get(r.institutionCode) || 0) + 1);
+        } catch { malformed++; }
+      }
+    }
+    res.json({ totalInventoryRecords:total, uploadedUnconfirmed:unconfirmed, reconciledRecords:reconciled,
+      malformedRows:malformed, institutions:[...counts].sort(([a],[b])=>a.localeCompare(b)).map(([code,records])=>({code,records})),
+      note:'Inventory records represent stored or reconciled files, not confirmed on-chain issuance totals.' });
+  } catch(e) { console.error('NUC overview:',e.message); res.status(500).json({error:'Unable to read NUC storage overview.'}); }
+});
+// Prevent static downloads of administrative source files and local archives.
+for (const prefix of ['/storage','/audit-exports','/storage-reconcile.cjs','/storage-inventory.cjs','/storage-admin.cjs','/server.cjs'])
+  app.use(prefix, (req,res)=>res.sendStatus(403));
+
 app.use('/api',(req,res)=>res.status(404).json({error:'Unknown API route.'}));
 // Never expose NUC-controlled wallet mappings or the inventory via static serving.
 app.use('/private', (req,res)=>res.sendStatus(403));

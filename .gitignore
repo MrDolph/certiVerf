@@ -27,6 +27,8 @@ node_modules/
 secrets/
 private-keys/
 credentials/
+patches/
+certiverf_backup*/
 
 # 3. Hardhat compilation outputs
 artifacts/

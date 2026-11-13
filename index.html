@@ -397,6 +397,18 @@
             </div>
           </div>
         </div>
+        <div id="nucInstitutionDetails" class="card nuc-institution-details" hidden></div>
+      </div>
+      <!-- Phase 4.4.1: NUC Storage Monitoring (within the existing admin portal) -->
+      <div class="card" id="nucStorageCard" style="display:none">
+        <div class="card-hdr">
+          <div><h2>Institutional Storage Monitoring</h2>
+            <p>Read-only NUC inventory overview. Access requires a signed admin-wallet challenge.</p></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadNucStorage()">↻ Refresh</button>
+        </div>
+        <div class="card-body">
+          <div id="nucStorageContent" aria-live="polite">Connect the NUC administrator wallet to load storage statistics.</div>
+        </div>
       </div>
       <!-- Certificate Statistics — inside pane-admin -->
       <div class="card" id="statsCard" style="display:none">
